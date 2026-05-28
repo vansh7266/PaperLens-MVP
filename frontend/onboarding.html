@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to PaperLens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --surface2: #161616;
+      --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.18);
+      --text: #ffffff; --text-muted: rgba(255,255,255,0.5); --text-faint: rgba(255,255,255,0.25);
+      --grad-start: #a8c4f0; --grad-mid: #e8d5b7; --grad-end: #f5e6cc;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column; }
+    a { text-decoration: none; color: inherit; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    .bg-glow { position: fixed; top: -200px; left: 50%; transform: translateX(-50%); width: 800px; height: 600px; background: radial-gradient(ellipse at center, rgba(168,196,240,0.06) 0%, rgba(232,213,183,0.03) 50%, transparent 70%); pointer-events: none; z-index: 0; animation: glowPulse 5s ease-in-out infinite; }
+    @keyframes glowPulse { 0%,100%{opacity:0.7;transform:translateX(-50%) scale(1)} 50%{opacity:1;transform:translateX(-50%) scale(1.05)} }
+
+    .page { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; position: relative; z-index: 1; }
+
+    .steps-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 40px; animation: fadeUp 0.4s ease both; }
+    .step-dot { width: 28px; height: 4px; border-radius: 2px; background: var(--border); transition: all 0.3s; }
+    .step-dot.active { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); width: 40px; }
+    .step-dot.done { background: rgba(168,196,240,0.4); }
+
+    .card { width: 100%; max-width: 640px; animation: fadeUp 0.4s ease 0.05s both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    .step-screen { display: none; }
+    .step-screen.active { display: block; }
+
+    /* Welcome */
+    .welcome-header { text-align: center; margin-bottom: 32px; }
+    .welcome-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+    .logo-text { display: flex; align-items: baseline; }
+    .logo-text .bold { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .logo-text .light { font-size: 22px; font-weight: 300; letter-spacing: 4px; color: var(--text-muted); }
+    .welcome-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.8px; margin-bottom: 10px; }
+    .welcome-header h1 span { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .welcome-header p { font-size: 14px; color: var(--text-muted); line-height: 1.65; max-width: 400px; margin: 0 auto; }
+
+    .preview-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .preview-item { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+    .preview-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(168,196,240,0.08); border: 1px solid rgba(168,196,240,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .preview-icon svg { width: 16px; height: 16px; stroke: var(--grad-start); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .preview-name { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+    .preview-desc { font-size: 12px; color: var(--text-faint); }
+
+    /* Topics */
+    .section-header { margin-bottom: 20px; }
+    .section-header h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px; }
+    .section-header p { font-size: 13px; color: var(--text-muted); }
+
+    .topics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+    .topic-card { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 15px 13px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+    .topic-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+    .topic-card.selected { border-color: rgba(168,196,240,0.4); background: rgba(168,196,240,0.05); }
+    .topic-card.selected::after { content: '✓'; position: absolute; top: 8px; right: 10px; font-size: 11px; font-weight: 700; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .topic-icon { font-size: 20px; margin-bottom: 8px; }
+    .topic-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .topic-desc { font-size: 11px; color: var(--text-faint); line-height: 1.4; }
+    .selected-count { font-size: 12px; color: var(--text-faint); margin-bottom: 16px; }
+    .selected-count span { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; }
+
+    /* Frequency */
+    .freq-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .freq-option { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.2s; }
+    .freq-option:hover { border-color: var(--border-hover); }
+    .freq-option.selected { border-color: rgba(168,196,240,0.4); background: rgba(168,196,240,0.04); }
+    .freq-radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .freq-option.selected .freq-radio { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); border-color: transparent; }
+    .freq-option.selected .freq-radio::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #000; }
+    .freq-info { flex: 1; }
+    .freq-name { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+    .freq-desc { font-size: 12px; color: var(--text-faint); }
+    .freq-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(168,196,240,0.1); color: var(--grad-start); border: 1px solid rgba(168,196,240,0.2); }
+
+    /* Channels */
+    .channel-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .channel-option { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.2s; }
+    .channel-option:hover { border-color: var(--border-hover); }
+    .channel-option.selected { border-color: rgba(168,196,240,0.35); background: rgba(168,196,240,0.04); }
+    .channel-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+    .channel-info { flex: 1; }
+    .channel-name { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+    .channel-desc { font-size: 12px; color: var(--text-faint); }
+    .channel-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .channel-option.selected .channel-check { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); border-color: transparent; }
+    .channel-option.selected .channel-check svg { display: block; }
+    .channel-check svg { width: 11px; height: 11px; stroke: #000; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; display: none; }
+
+    /* All set */
+    .allset-screen { text-align: center; padding: 16px 0; }
+    .allset-icon { width: 72px; height: 72px; border-radius: 20px; background: rgba(168,196,240,0.08); border: 1px solid rgba(168,196,240,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: iconPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+    @keyframes iconPop { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+    .allset-icon svg { width: 32px; height: 32px; stroke: var(--grad-start); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .allset-screen h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.6px; margin-bottom: 10px; }
+    .allset-screen h2 span { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .allset-screen > p { font-size: 14px; color: var(--text-muted); max-width: 380px; margin: 0 auto 28px; line-height: 1.65; }
+    .summary-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 32px; }
+    .summary-chip { font-size: 12px; font-weight: 500; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; }
+
+    /* Buttons */
+    .btn-row { display: flex; align-items: center; gap: 12px; }
+    .btn-back { font-family: var(--font); font-size: 13.5px; font-weight: 500; color: var(--text-muted); background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 12px 22px; cursor: pointer; transition: all 0.15s; }
+    .btn-back:hover { color: var(--text); border-color: var(--border-hover); }
+    .btn-next { flex: 1; font-family: var(--font); font-size: 14px; font-weight: 600; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: #000; border: none; border-radius: 10px; padding: 13px 28px; cursor: pointer; transition: opacity 0.15s; }
+    .btn-next:hover { opacity: 0.88; }
+    .btn-skip { font-family: var(--font); font-size: 13px; color: var(--text-faint); background: transparent; border: none; cursor: pointer; padding: 4px 0; transition: color 0.15s; display: block; text-align: center; margin-top: 12px; }
+    .btn-skip:hover { color: var(--text-muted); }
+
+    @media (max-width:640px) { .topics-grid { grid-template-columns: repeat(2,1fr); } .page { padding: 24px 16px; } }
+    @media (max-width:400px) { .topics-grid { grid-template-columns: 1fr; } }
+  
+
+  </style>
+</head>
+<body>
+
+<div class="bg-glow" style="pointer-events:none;"></div>
+
+<div class="page">
+
+  <div class="steps-indicator" id="steps-indicator">
+    <div class="step-dot active" id="dot-0"></div>
+    <div class="step-dot" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+    <div class="step-dot" id="dot-3"></div>
+  </div>
+
+  <div class="card">
+
+    <!-- STEP 0: WELCOME -->
+    <div class="step-screen active" id="step-0">
+      <div class="welcome-header">
+        <div class="welcome-logo">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <circle cx="14" cy="14" r="10" stroke="url(#wlg)" stroke-width="1.8"/>
+            <circle cx="14" cy="14" r="5" stroke="url(#wlg)" stroke-width="1.2" opacity="0.6"/>
+            <circle cx="14" cy="14" r="2" fill="url(#wlg)"/>
+            <line x1="21" y1="21" x2="28" y2="28" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+            <defs>
+              <linearGradient id="wlg" x1="0" y1="0" x2="32" y2="32">
+                <stop offset="0%" stop-color="#a8c4f0"/>
+                <stop offset="100%" stop-color="#f5e6cc"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="logo-text">
+            <span class="bold">Paper</span>
+            <span class="light">Lens</span>
+          </div>
+        </div>
+        <h1>Welcome, <span id="welcome-name">researcher</span> 👋</h1>
+        <p>Let's personalise your experience in 3 quick steps — takes less than 60 seconds.</p>
+      </div>
+
+      <div class="preview-row">
+        <div class="preview-item">
+          <div class="preview-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <div><div class="preview-name">Pick your topics</div><div class="preview-desc">Choose which areas of AI/ML you care about</div></div>
+        </div>
+        <div class="preview-item">
+          <div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><div class="preview-name">Set your digest frequency</div><div class="preview-desc">Daily, twice daily, or weekly — you decide</div></div>
+        </div>
+        <div class="preview-item">
+          <div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+          <div><div class="preview-name">Choose where to get notified</div><div class="preview-desc">Email, WhatsApp, or browser push</div></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-next" onclick="goToStep(1)">Get started →</button>
+      </div>
+    </div>
+
+    <!-- STEP 1: TOPICS -->
+    <div class="step-screen" id="step-1">
+      <div class="section-header">
+        <h2>What do you follow?</h2>
+        <p>Pick the AI/ML areas you care about — select as many as you want</p>
+      </div>
+
+      <div class="topics-grid" id="topics-grid">
+        <div class="topic-card selected" onclick="toggleTopic(this)" data-topic="llm"><div class="topic-icon">🧠</div><div class="topic-name">LLMs</div><div class="topic-desc">Language models, GPT, Claude, Llama</div></div>
+        <div class="topic-card selected" onclick="toggleTopic(this)" data-topic="cv"><div class="topic-icon">👁️</div><div class="topic-name">Computer Vision</div><div class="topic-desc">Image models, detection, segmentation</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="rl"><div class="topic-icon">🎮</div><div class="topic-name">RL / Agents</div><div class="topic-desc">Reinforcement learning, AI agents</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="diffusion"><div class="topic-icon">🎨</div><div class="topic-name">Diffusion Models</div><div class="topic-desc">Image/video generation, DALL-E, SD</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="nlp"><div class="topic-icon">📝</div><div class="topic-name">NLP</div><div class="topic-desc">Text processing, embeddings, RAG</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="multimodal"><div class="topic-icon">🔀</div><div class="topic-name">Multimodal</div><div class="topic-desc">Vision + language, audio AI</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="robotics"><div class="topic-icon">🤖</div><div class="topic-name">Robotics</div><div class="topic-desc">Physical AI, embodied intelligence</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="efficiency"><div class="topic-icon">⚡</div><div class="topic-name">Model efficiency</div><div class="topic-desc">Quantisation, pruning, LoRA, MoE</div></div>
+        <div class="topic-card" onclick="toggleTopic(this)" data-topic="safety"><div class="topic-icon">🛡️</div><div class="topic-name">AI Safety</div><div class="topic-desc">Alignment, interpretability</div></div>
+      </div>
+
+      <div class="selected-count"><span id="selected-count">2</span> topics selected</div>
+
+      <div class="btn-row">
+        <button class="btn-back" onclick="goToStep(0)">Back</button>
+        <button class="btn-next" onclick="goToStep(2)">Continue →</button>
+      </div>
+      <button class="btn-skip" onclick="goToStep(2)">Skip for now</button>
+    </div>
+
+    <!-- STEP 2: FREQUENCY -->
+    <div class="step-screen" id="step-2">
+      <div class="section-header">
+        <h2>How often do you want updates?</h2>
+        <p>Choose your digest frequency — changeable anytime in settings</p>
+      </div>
+
+      <div class="freq-options">
+        <div class="freq-option selected" onclick="selectFreq(this)" data-freq="daily">
+          <div class="freq-radio"></div>
+          <div class="freq-info"><div class="freq-name">Daily digest</div><div class="freq-desc">One morning email with everything important from the past 24 hours</div></div>
+          <span class="freq-badge">Most popular</span>
+        </div>
+        <div class="freq-option" onclick="selectFreq(this)" data-freq="twice">
+          <div class="freq-radio"></div>
+          <div class="freq-info"><div class="freq-name">Twice daily</div><div class="freq-desc">Morning and evening updates — for fast-moving days</div></div>
+        </div>
+        <div class="freq-option" onclick="selectFreq(this)" data-freq="weekly">
+          <div class="freq-radio"></div>
+          <div class="freq-info"><div class="freq-name">Weekly digest</div><div class="freq-desc">One comprehensive Sunday summary of the whole week</div></div>
+        </div>
+        <div class="freq-option" onclick="selectFreq(this)" data-freq="instant">
+          <div class="freq-radio"></div>
+          <div class="freq-info"><div class="freq-name">Instant alerts only</div><div class="freq-desc">No scheduled digest — only notified when something big drops</div></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-back" onclick="goToStep(1)">Back</button>
+        <button class="btn-next" onclick="goToStep(3)">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: CHANNELS -->
+    <div class="step-screen" id="step-3">
+      <div class="section-header">
+        <h2>Where should we reach you?</h2>
+        <p>Choose your notification channels — select all that apply</p>
+      </div>
+
+      <div class="channel-options">
+        <div class="channel-option selected" onclick="toggleChannel(this)" data-channel="email">
+          <div class="channel-icon" style="background:rgba(168,196,240,0.08);border:1px solid rgba(168,196,240,0.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a8c4f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div class="channel-info"><div class="channel-name">Email</div><div class="channel-desc">Daily digest and alerts delivered to your inbox</div></div>
+          <div class="channel-check"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div>
+        </div>
+
+        <div class="channel-option" onclick="toggleChannel(this)" data-channel="whatsapp">
+          <div class="channel-icon" style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#25d366"/>
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.526 3.655 1.438 5.168L2 22l4.978-1.406A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="#25d366" stroke-width="1.5" fill="none"/>
+            </svg>
+          </div>
+          <div class="channel-info"><div class="channel-name">WhatsApp</div><div class="channel-desc">Get digest and chat with Paper Peeler in WhatsApp (Pro feature)</div></div>
+          <div class="channel-check"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div>
+        </div>
+
+        <div class="channel-option" onclick="toggleChannel(this)" data-channel="browser">
+          <div class="channel-icon" style="background:rgba(168,196,240,0.08);border:1px solid rgba(168,196,240,0.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a8c4f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div class="channel-info"><div class="channel-name">Browser notifications</div><div class="channel-desc">Instant push notifications when something important drops</div></div>
+          <div class="channel-check"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-back" onclick="goToStep(2)">Back</button>
+        <button class="btn-next" onclick="finishOnboarding()">Finish setup →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: ALL SET -->
+    <div class="step-screen" id="step-4">
+      <div class="allset-screen">
+        <div class="allset-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h2>You're all set, <span id="allset-name">researcher</span>!</h2>
+        <p>Your feed is being personalised right now. Your first digest will arrive based on your chosen schedule.</p>
+        <div class="summary-chips" id="summary-chips"></div>
+        <div class="btn-row" style="max-width:360px;margin:0 auto">
+          <button class="btn-next" onclick="goToDashboard()">Go to my dashboard →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Supabase — update URL and KEY to match your project ──
+  const SUPABASE_URL = 'https://vsrtfsietsbvvucbwzkr.supabase.co'
+  const SUPABASE_ANON_KEY = 'yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
+  let sb = null
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) } catch(e) {}
+
+  // ── State ──
+  let currentStep = 0
+  let selectedTopics = ['llm','cv']
+  let selectedFreq = 'daily'
+  let selectedChannels = ['email']
+
+  // ── Init — NEVER crash, always show the page ──
+  async function init() {
+    // Try to get user name — but if anything fails, just show default
+    try {
+      if (!sb) return
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) return // stay on page, don't redirect
+      const u = session.user
+      // If already onboarded, go to dashboard
+      if (u.user_metadata?.onboarded === true) {
+        window.location.href = 'dashboard.html'
+        return
+      }
+      // Set name
+      const name = u.user_metadata?.first_name
+        || u.user_metadata?.full_name?.split(' ')[0]
+        || u.email?.split('@')[0]
+        || 'researcher'
+      document.getElementById('welcome-name').textContent = name
+      document.getElementById('allset-name').textContent = name
+    } catch(e) {
+      // Do nothing — page still works perfectly without Supabase
+      console.log('Session check skipped:', e.message)
+    }
+  }
+
+  // ── Step navigation ──
+  function goToStep(step) {
+    // Hide current step
+    const cur = document.getElementById('step-' + currentStep)
+    if (cur) cur.classList.remove('active')
+
+    // Update dots
+    const curDot = document.getElementById('dot-' + currentStep)
+    if (curDot) {
+      curDot.classList.remove('active')
+      if (step > currentStep) curDot.classList.add('done')
+    }
+
+    // Show new step
+    currentStep = step
+    const next = document.getElementById('step-' + currentStep)
+    if (next) next.classList.add('active')
+
+    // Update new dot
+    const nextDot = document.getElementById('dot-' + currentStep)
+    if (nextDot) { nextDot.classList.remove('done'); nextDot.classList.add('active') }
+
+    // Hide progress dots on final screen
+    if (step === 4) {
+      const ind = document.getElementById('steps-indicator')
+      if (ind) ind.style.display = 'none'
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // ── Topic toggle ──
+  function toggleTopic(el) {
+    el.classList.toggle('selected')
+    const t = el.dataset.topic
+    if (el.classList.contains('selected')) {
+      if (!selectedTopics.includes(t)) selectedTopics.push(t)
+    } else {
+      selectedTopics = selectedTopics.filter(x => x !== t)
+    }
+    const cnt = document.getElementById('selected-count')
+    if (cnt) cnt.textContent = selectedTopics.length
+  }
+
+  // ── Frequency select ──
+  function selectFreq(el) {
+    document.querySelectorAll('.freq-option').forEach(f => f.classList.remove('selected'))
+    el.classList.add('selected')
+    selectedFreq = el.dataset.freq
+  }
+
+  // ── Channel toggle ──
+  function toggleChannel(el) {
+    el.classList.toggle('selected')
+    const c = el.dataset.channel
+    if (el.classList.contains('selected')) {
+      if (!selectedChannels.includes(c)) selectedChannels.push(c)
+    } else {
+      selectedChannels = selectedChannels.filter(x => x !== c)
+    }
+  }
+
+  // ── Finish onboarding ──
+  async function finishOnboarding() {
+    // Save to Supabase if available
+    try {
+      if (sb) {
+        await sb.auth.updateUser({
+          data: {
+            onboarded: true,
+            topics: selectedTopics,
+            digest_freq: selectedFreq,
+            channels: selectedChannels,
+          }
+        })
+      }
+    } catch(e) { console.log('Could not save preferences:', e.message) }
+
+    // Build summary chips
+    const chips = document.getElementById('summary-chips')
+    if (chips) {
+      chips.innerHTML = ''
+      const tNames = { llm:'LLMs', cv:'Computer Vision', rl:'RL / Agents', diffusion:'Diffusion Models', nlp:'NLP', multimodal:'Multimodal', robotics:'Robotics', efficiency:'Model efficiency', safety:'AI Safety' }
+      const fNames = { daily:'Daily digest', twice:'Twice daily', weekly:'Weekly digest', instant:'Instant alerts' }
+      const cNames = { email:'Email', whatsapp:'WhatsApp', browser:'Browser push' }
+      selectedTopics.forEach(t => {
+        const el = document.createElement('div')
+        el.className = 'summary-chip'
+        el.textContent = tNames[t] || t
+        chips.appendChild(el)
+      })
+      const fel = document.createElement('div')
+      fel.className = 'summary-chip'
+      fel.textContent = fNames[selectedFreq] || selectedFreq
+      chips.appendChild(fel)
+      selectedChannels.forEach(c => {
+        const el = document.createElement('div')
+        el.className = 'summary-chip'
+        el.textContent = cNames[c] || c
+        chips.appendChild(el)
+      })
+    }
+
+    goToStep(4)
+  }
+
+  // ── Go to dashboard ──
+  function goToDashboard() {
+    window.location.href = 'dashboard.html'
+  }
+
+  // ── Start ──
+  init()
+</script>
+
+</body>
+</html>

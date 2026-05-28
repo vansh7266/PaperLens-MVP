@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Dashboard — PaperLens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0a0a0a;
+      --s1: #111;
+      --s2: #161616;
+      --s3: #1a1a1a;
+      --border: rgba(255, 255, 255, 0.07);
+      --bh: rgba(255, 255, 255, 0.15);
+      --text: #fff;
+      --muted: rgba(255, 255, 255, 0.5);
+      --faint: rgba(255, 255, 255, 0.25);
+      --g1: #a8c4f0;
+      --g2: #f5e6cc;
+      --font: 'Inter', -apple-system, sans-serif;
+      --sw: 260px;
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    button {
+      font-family: var(--font);
+      cursor: pointer
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px
+    }
+
+    /* ════ SIDEBAR ════
+   Fixed on left. transform slides it off-screen when .closed.
+   z-index 50 — below topbar overlay. */
+    .sidebar {
+      width: var(--sw);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+      transition: transform 0.25s ease;
+      will-change: transform;
+    }
+
+    .sidebar.closed {
+      transform: translateX(calc(-1 * var(--sw)));
+    }
+
+    /* Sidebar header */
+    .sb-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 16px 14px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sb-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0
+    }
+
+    .logo-b {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text
+    }
+
+    .logo-l {
+      font-size: 15px;
+      font-weight: 300;
+      letter-spacing: 3px;
+      color: var(--muted)
+    }
+
+    /* Nav */
+    .sb-nav {
+      flex: 1;
+      padding: 12px 10px;
+      overflow-y: auto
+    }
+
+    .sb-sec {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--faint);
+      text-transform: uppercase;
+      padding: 10px 10px 5px
+    }
+
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 1px;
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left
+    }
+
+    .sb-item:hover {
+      background: var(--s2);
+      color: var(--text)
+    }
+
+    .sb-item.active {
+      background: var(--s2);
+      color: var(--text);
+      font-weight: 500
+    }
+
+    .sb-item svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0
+    }
+
+    .sb-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(168, 196, 240, 0.12);
+      color: var(--g1);
+      padding: 1px 7px;
+      border-radius: 99px
+    }
+
+    .topic-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .sb-bottom {
+      padding: 12px 10px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+      border: none;
+      background: none;
+      text-align: left
+    }
+
+    .user-row:hover {
+      background: var(--s2)
+    }
+
+    .uav {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #000;
+      flex-shrink: 0
+    }
+
+    .uinfo {
+      flex: 1;
+      min-width: 0
+    }
+
+    .uname {
+      font-size: 12.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .uplan {
+      font-size: 10.5px;
+      color: var(--faint)
+    }
+
+    /* ════ MAIN ════
+   margin-left = sidebar width when open.
+   margin-left = 0 when sidebar is closed.
+   Transitions in sync with sidebar. */
+    .main {
+      flex: 1;
+      margin-left: var(--sw);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 100vh;
+      transition: margin-left 0.25s ease;
+      will-change: margin-left;
+    }
+
+    .main.wide {
+      margin-left: 0
+    }
+
+    /* ════ TOPBAR ════ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 10, 0.9);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .tb-left {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    /* ── SIDEBAR TOGGLE BUTTON (always visible in topbar, like Claude/ChatGPT) ── */
+    .sb-toggle {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .sb-toggle:hover {
+      background: var(--s2);
+      color: var(--text);
+      border-color: var(--bh)
+    }
+
+    .sb-toggle svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round
+    }
+
+    .tb-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.3px
+    }
+
+    .tb-date {
+      font-size: 12px;
+      color: var(--faint)
+    }
+
+    .tb-right {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .ftabs {
+      display: flex;
+      gap: 4px
+    }
+
+    .ftab {
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s
+    }
+
+    .ftab:hover {
+      color: var(--text);
+      border-color: var(--bh)
+    }
+
+    .ftab.active {
+      background: var(--text);
+      color: #000;
+      border-color: var(--text)
+    }
+
+    .btn-refresh {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.15s
+    }
+
+    .btn-refresh:hover {
+      color: var(--text);
+      border-color: var(--bh)
+    }
+
+    .btn-refresh svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round
+    }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .sc {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px
+    }
+
+    .sc-n {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text
+    }
+
+    .sc-l {
+      font-size: 11px;
+      color: var(--faint);
+      margin-top: 2px
+    }
+
+    /* ── Upgrade banner ── */
+    .up-banner {
+      margin: 14px 24px 0;
+      background: linear-gradient(135deg, rgba(168, 196, 240, 0.06), rgba(245, 230, 204, 0.04));
+      border: 1px solid rgba(168, 196, 240, 0.15);
+      border-radius: 12px;
+      padding: 13px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px
+    }
+
+    .up-txt {
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .up-txt strong {
+      color: var(--text)
+    }
+
+    .btn-up {
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      color: #000;
+      white-space: nowrap;
+      transition: opacity 0.15s
+    }
+
+    .btn-up:hover {
+      opacity: 0.88
+    }
+
+    /* ── Feed ── */
+    .feed {
+      flex: 1;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    /* ── Paper card ── */
+    .pc {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      animation: ci 0.4s ease both
+    }
+
+    @keyframes ci {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .pc:hover {
+      border-color: var(--bh);
+      background: var(--s2);
+      transform: translateY(-1px)
+    }
+
+    .cm {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap
+    }
+
+    .src {
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 5px;
+      background: var(--s3);
+      border: 1px solid var(--border);
+      color: var(--muted)
+    }
+
+    .time {
+      font-size: 11px;
+      color: var(--faint)
+    }
+
+    .pb {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 5px;
+      background: linear-gradient(135deg, var(--g1), var(--g2));
+      color: #000;
+      margin-left: auto
+    }
+
+    .tb2 {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 5px;
+      background: var(--s3);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      margin-left: auto
+    }
+
+    .ct {
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      margin-bottom: 7px;
+      line-height: 1.45
+    }
+
+    .cs {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 12px
+    }
+
+    .cf {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap
+    }
+
+    .tp {
+      font-size: 10.5px;
+      color: var(--faint);
+      border: 1px solid var(--border);
+      padding: 2px 9px;
+      border-radius: 5px
+    }
+
+    .d-e {
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.2)
+    }
+
+    .d-m {
+      color: #facc15;
+      border-color: rgba(250, 204, 21, 0.2)
+    }
+
+    .d-h {
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.2)
+    }
+
+    .ca {
+      margin-left: auto;
+      font-size: 11.5px;
+      color: var(--faint);
+      transition: color 0.15s
+    }
+
+    .pc:hover .ca {
+      color: var(--g1)
+    }
+
+    /* ── Skeleton ── */
+    .sk {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px
+    }
+
+    .skl {
+      background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
+      background-size: 200% 100%;
+      animation: sh 1.5s infinite;
+      border-radius: 4px;
+      height: 12px;
+      margin-bottom: 8px
+    }
+
+    @keyframes sh {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    /* ── Mobile overlay ── */
+    .mob-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 40
+    }
+
+    .mob-overlay.show {
+      display: block
+    }
+
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(calc(-1 * var(--sw)))
+      }
+
+      .sidebar.mob-open {
+        transform: translateX(0) !important
+      }
+
+      .main {
+        margin-left: 0 !important
+      }
+
+      .ftabs {
+        display: none
+      }
+
+      .stats {
+        grid-template-columns: 1fr 1fr;
+        padding: 14px 16px
+      }
+
+      .topbar,
+      .feed {
+        padding-left: 16px;
+        padding-right: 16px
+      }
+
+      .up-banner {
+        margin: 12px 16px 0;
+        flex-direction: column;
+        align-items: flex-start
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="mob-overlay" id="mob-overlay" onclick="closeMob()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="10" cy="10" r="7" stroke="url(#slg)" stroke-width="1.5" />
+          <circle cx="10" cy="10" r="3.2" stroke="url(#slg)" stroke-width="1" opacity="0.6" />
+          <circle cx="10" cy="10" r="1.3" fill="url(#slg)" />
+          <line x1="15.2" y1="15.2" x2="19.5" y2="19.5" stroke="white" stroke-width="1.8" stroke-linecap="round"
+            opacity="0.7" />
+          <defs>
+            <linearGradient id="slg" x1="0" y1="0" x2="22" y2="22">
+              <stop offset="0%" stop-color="#a8c4f0" />
+              <stop offset="100%" stop-color="#f5e6cc" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-b">Paper</span><span class="logo-l">Lens</span>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-sec">Main</div>
+      <a class="sb-item active" href="dashboard.html">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        Feed <span class="sb-badge" id="feed-cnt">—</span>
+      </a>
+      <a class="sb-item" href="peeler.html">
+        <svg viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" />
+          <circle cx="11" cy="11" r="4" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        Paper Peeler
+      </a>
+      <a class="sb-item" href="#">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+        Saved papers
+      </a>
+      <a class="sb-item" href="#">
+        <svg viewBox="0 0 24 24">
+          <path d="M18 20V10M12 20V4M6 20v-6" />
+        </svg>
+        Trending
+      </a>
+      <a class="sb-item" href="settings.html">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        Settings
+      </a>
+      <div class="sb-sec">Topics</div>
+      <button class="sb-item" onclick="filterTopic('LLMs',this)"><span class="topic-dot"
+          style="background:#a8c4f0"></span>LLMs</button>
+      <button class="sb-item" onclick="filterTopic('Computer Vision',this)"><span class="topic-dot"
+          style="background:#f0a8c4"></span>Computer Vision</button>
+      <button class="sb-item" onclick="filterTopic('RL',this)"><span class="topic-dot"
+          style="background:#a8f0c4"></span>RL / Agents</button>
+      <button class="sb-item" onclick="filterTopic('Diffusion',this)"><span class="topic-dot"
+          style="background:#f0d5a8"></span>Diffusion Models</button>
+      <button class="sb-item" onclick="filterTopic('NLP',this)"><span class="topic-dot"
+          style="background:#c4a8f0"></span>NLP</button>
+      <button class="sb-item" style="color:var(--faint);font-size:12px" onclick="window.location.href='settings.html'">
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Manage topics
+      </button>
+    </nav>
+
+    <div class="sb-bottom">
+      <button class="user-row" onclick="window.location.href='settings.html'">
+        <div class="uav" id="uav">?</div>
+        <div class="uinfo">
+          <div class="uname" id="uname">Loading...</div>
+          <div class="uplan" id="uplan">Free plan</div>
+        </div>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main" id="main">
+
+    <div class="topbar">
+      <div class="tb-left">
+        <!-- ── SIDEBAR TOGGLE — always visible, works like Claude/ChatGPT ── -->
+        <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+          <svg viewBox="0 0 24 24">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div>
+          <div class="tb-title">Today's feed</div>
+          <div class="tb-date" id="tb-date"></div>
+        </div>
+      </div>
+      <div class="tb-right">
+        <div class="ftabs">
+          <button class="ftab active" onclick="setFilter('all',this)">All</button>
+          <button class="ftab" onclick="setFilter('paper',this)">Papers</button>
+          <button class="ftab" onclick="setFilter('news',this)">News</button>
+          <button class="ftab" onclick="setFilter('model',this)">Models</button>
+        </div>
+        <button class="btn-refresh" onclick="loadFeed()">
+          <svg viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="sc">
+        <div class="sc-n" id="s-new">—</div>
+        <div class="sc-l">New today</div>
+      </div>
+      <div class="sc">
+        <div class="sc-n" id="s-peel">—</div>
+        <div class="sc-l">Peeled papers</div>
+      </div>
+      <div class="sc">
+        <div class="sc-n" id="s-save">—</div>
+        <div class="sc-l">Saved</div>
+      </div>
+    </div>
+
+    <div class="up-banner" id="up-banner" style="display:none">
+      <div class="up-txt"><strong>Upgrade to Pro</strong> — unlimited Paper Peeler, WhatsApp alerts, instant
+        notifications.</div>
+      <button class="btn-up" onclick="window.location.href='settings.html'">Upgrade — $9/mo</button>
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="sk">
+        <div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div>
+        <div class="skl" style="width:85%"></div>
+        <div class="skl" style="width:70%;margin-bottom:12px"></div>
+        <div class="skl" style="width:95%;height:10px"></div>
+      </div>
+      <div class="sk">
+        <div class="skl" style="width:25%;height:10px;margin-bottom:12px"></div>
+        <div class="skl" style="width:90%"></div>
+        <div class="skl" style="width:62%;margin-bottom:12px"></div>
+        <div class="skl" style="width:88%;height:10px"></div>
+      </div>
+      <div class="sk">
+        <div class="skl" style="width:28%;height:10px;margin-bottom:12px"></div>
+        <div class="skl" style="width:78%"></div>
+        <div class="skl" style="width:66%;margin-bottom:12px"></div>
+        <div class="skl" style="width:92%;height:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://vsrtfsietsbvvucbwzkr.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
+    let sb
+    try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) } catch (e) { console.warn('Supabase SDK not loaded') }
+
+    let allItems = [], curFilter = 'all'
+
+    // ── Feed data (Phase 3: replaced by real API) ──
+    const FEED = [
+      { id: 1, type: 'paper', src: 'arXiv', time: '2h ago', title: 'Scaling language model reasoning with chain-of-thought distillation', sum: 'Proposes a distillation framework that transfers chain-of-thought reasoning from large models to smaller ones without quality loss. The 7B student matches 70B teacher on GSM8K at 9.8× faster inference.', topics: ['LLMs', 'Reasoning'], diff: 'intermediate', peeler: true },
+      { id: 2, type: 'news', src: 'Google DeepMind', time: '4h ago', title: 'Gemini 2.5 Pro achieves new state-of-the-art on math benchmarks', sum: 'Google announces improvements in mathematical reasoning, surpassing previous models on MATH-500 and AIME by wide margins.', topics: ['News', 'LLMs'], diff: null, peeler: false },
+      { id: 3, type: 'paper', src: 'arXiv', time: '5h ago', title: 'DiffusionDet v2: Real-time object detection via diffusion models', sum: 'Introduces a faster inference pipeline for detection tasks using denoising diffusion, achieving 42 FPS on standard hardware while maintaining SOTA accuracy on COCO.', topics: ['Computer Vision', 'Diffusion'], diff: 'advanced', peeler: true },
+      { id: 4, type: 'model', src: 'HuggingFace', time: '6h ago', title: 'Mistral Small 3.1 released — 24B parameters, 128k context window', sum: 'Mistral releases updated small model with expanded context window and improved instruction following. Apache 2.0 license.', topics: ['Models', 'Open Source'], diff: null, peeler: false },
+      { id: 5, type: 'paper', src: 'arXiv', time: '8h ago', title: 'RLVR: Reinforcement learning from verifiable rewards for complex reasoning', sum: 'A new RL framework where rewards come from verifiable outcomes rather than human feedback. Strong results on math, code, and logical reasoning without reward hacking.', topics: ['RL', 'Reasoning'], diff: 'advanced', peeler: true },
+      { id: 6, type: 'news', src: 'OpenAI', time: '10h ago', title: 'GPT-4o achieves top scores on agentic coding benchmarks', sum: 'OpenAI publishes new evaluation results showing GPT-4o leading on SWE-bench Verified. New tool use capabilities detailed in technical report.', topics: ['News', 'Agents'], diff: null, peeler: false },
+      { id: 7, type: 'paper', src: 'Semantic Scholar', time: '12h ago', title: 'MoE-LLaVA: Mixture of experts for large vision-language models', sum: 'Applies mixture-of-experts to multimodal models, dramatically reducing computational cost while maintaining performance on visual question answering benchmarks.', topics: ['Computer Vision', 'LLMs', 'Multimodal'], diff: 'intermediate', peeler: true },
+      { id: 8, type: 'model', src: 'Meta AI', time: '14h ago', title: 'Llama 4 Scout — 17B active parameters from 109B total with MoE', sum: 'Meta releases Llama 4 Scout using mixture-of-experts. Only 17B parameters active per forward pass. Outperforms previous generation on most benchmarks.', topics: ['Models', 'LLMs'], diff: null, peeler: false },
+    ]
+
+    // ── Auth + init ──
+    async function init() {
+      document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+      // Restore sidebar state from localStorage
+      const saved = localStorage.getItem('pl_sb')
+      if (saved === 'closed') {
+        document.getElementById('sidebar').classList.add('closed')
+        document.getElementById('main').classList.add('wide')
+      }
+
+      if (!sb) { loadFeed(); return }
+      try {
+        const { data: { session } } = await sb.auth.getSession()
+        if (!session) { window.location.href = 'login.html'; return }
+        const u = session.user
+        const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0]
+        const ini = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        const plan = u.user_metadata?.plan || 'free'
+        document.getElementById('uav').textContent = ini
+        document.getElementById('uname').textContent = name
+        document.getElementById('uplan').textContent = plan === 'pro' ? 'Pro plan' : 'Free plan'
+        if (plan === 'free') document.getElementById('up-banner').style.display = 'flex'
+      } catch (e) { }
+      loadFeed()
+    }
+
+    // ── SIDEBAR TOGGLE — exactly like Claude/ChatGPT ──
+    // One ☰ button in topbar. Click toggles sidebar open/closed.
+    function toggleSidebar() {
+      const isMob = window.innerWidth <= 768
+      if (isMob) {
+        // Mobile: slide over with backdrop
+        const mob = document.getElementById('sidebar').classList.contains('mob-open')
+        document.getElementById('sidebar').classList.toggle('mob-open')
+        document.getElementById('mob-overlay').classList.toggle('show', !mob)
+      } else {
+        // Desktop: slide sidebar left, expand main content
+        const sidebar = document.getElementById('sidebar')
+        const main = document.getElementById('main')
+        const isOpen = !sidebar.classList.contains('closed')
+        if (isOpen) {
+          sidebar.classList.add('closed')
+          main.classList.add('wide')
+          localStorage.setItem('pl_sb', 'closed')
+        } else {
+          sidebar.classList.remove('closed')
+          main.classList.remove('wide')
+          localStorage.setItem('pl_sb', 'open')
+        }
+      }
+    }
+
+    function closeMob() {
+      document.getElementById('sidebar').classList.remove('mob-open')
+      document.getElementById('mob-overlay').classList.remove('show')
+    }
+
+    // ── Feed ──
+    function loadFeed() {
+      setTimeout(() => {
+        document.querySelectorAll('.sk').forEach(s => s.remove())
+        allItems = FEED
+        renderFeed(allItems)
+        document.getElementById('s-new').textContent = FEED.length
+        document.getElementById('s-peel').textContent = FEED.filter(i => i.peeler).length
+        document.getElementById('s-save').textContent = '3'
+        document.getElementById('feed-cnt').textContent = FEED.length
+      }, 900)
+    }
+
+    function renderFeed(items) {
+      const f = document.getElementById('feed')
+      f.querySelectorAll('.pc,.empty').forEach(c => c.remove())
+      if (!items.length) {
+        const e = document.createElement('div'); e.className = 'empty'
+        e.style.cssText = 'text-align:center;padding:48px;color:var(--faint);font-size:13px'
+        e.textContent = 'Nothing here — try a different filter'; f.appendChild(e); return
+      }
+      items.forEach((item, i) => {
+        const c = document.createElement('div'); c.className = 'pc'; c.style.animationDelay = `${i * 0.05}s`
+        const dc = item.diff === 'easy' ? 'd-e' : item.diff === 'advanced' ? 'd-h' : 'd-m'
+        c.innerHTML = `
+      <div class="cm">
+        <span class="src">${item.src}</span>
+        <span class="time">${item.time}</span>
+        ${item.peeler ? '<span class="pb">Paper Peeler</span>' : `<span class="tb2">${item.type === 'model' ? 'Model release' : 'News'}</span>`}
+      </div>
+      <div class="ct">${item.title}</div>
+      <div class="cs">${item.sum}</div>
+      <div class="cf">
+        ${item.topics.map(t => `<span class="tp">${t}</span>`).join('')}
+        ${item.diff ? `<span class="tp ${dc}">${item.diff[0].toUpperCase() + item.diff.slice(1)}</span>` : ''}
+        <div class="ca">${item.peeler ? 'Peel this paper →' : 'Read more →'}</div>
+      </div>`
+        c.onclick = () => { if (item.peeler) window.location.href = `peeler.html?id=${item.id}` }
+        f.appendChild(c)
+      })
+    }
+
+    function setFilter(f, btn) {
+      curFilter = f
+      document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'))
+      btn.classList.add('active')
+      renderFeed(f === 'all' ? allItems : allItems.filter(i => i.type === f))
+    }
+
+    function filterTopic(topic, el) {
+      renderFeed(allItems.filter(i => i.topics.some(t => t.includes(topic))))
+      document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('active'))
+      el.classList.add('active')
+    }
+
+    init()
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PaperLens — The sharpest way to stay ahead</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--s1:#111111;--s2:#161616;
+  --border:rgba(255,255,255,0.08);--bh:rgba(255,255,255,0.2);
+  --text:#fff;--muted:rgba(255,255,255,0.5);--faint:rgba(255,255,255,0.25);
+  --g1:#a8c4f0;--g2:#e8d5b7;--g3:#f5e6cc;
+  --font:'Inter',-apple-system,sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+/* ── Navbar ── */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,10,0.85);backdrop-filter:blur(16px);z-index:1000}
+.nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
+.logo-b{font-size:16px;font-weight:700;letter-spacing:-0.4px;background:linear-gradient(135deg,var(--g1),var(--g3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-l{font-size:16px;font-weight:300;letter-spacing:3.5px;color:var(--muted)}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:13.5px;color:var(--muted)}
+.nav-links a{transition:color 0.15s}.nav-links a:hover{color:var(--text)}
+.nav-actions{display:flex;align-items:center;gap:10px}
+button{font-family:var(--font);cursor:pointer}
+.btn-ghost{font-size:13px;color:var(--muted);padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;transition:all 0.15s}
+.btn-ghost:hover{color:var(--text);border-color:var(--bh)}
+.btn-primary{font-size:13px;font-weight:500;color:#000;background:#fff;padding:7px 18px;border-radius:8px;border:none;transition:opacity 0.15s}
+.btn-primary:hover{opacity:0.88}
+
+/* ── Hero ── */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:100px 24px 88px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero-glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(168,196,240,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;animation:gp 4s ease-in-out infinite}
+@keyframes gp{0%,100%{opacity:0.8;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.05)}}
+.hero>*:not(.hero-glow){position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:5px 14px;margin-bottom:36px;animation:fu 0.5s ease 0.1s both}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.5);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+.hero h1{font-size:clamp(38px,6vw,60px);font-weight:700;letter-spacing:-2.5px;line-height:1.08;margin-bottom:22px;background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 50%,var(--g3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:fu 0.5s ease 0.2s both}
+.hero h1 .muted{background:linear-gradient(135deg,rgba(168,196,240,0.5),rgba(245,230,204,0.5));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero>p{font-size:15px;color:var(--muted);max-width:440px;line-height:1.75;margin-bottom:38px;animation:fu 0.5s ease 0.3s both}
+.hero-actions{display:flex;align-items:center;gap:12px;margin-bottom:18px;animation:fu 0.5s ease 0.4s both}
+.btn-lg{font-size:14px;font-weight:500;padding:12px 28px;border-radius:10px;transition:all 0.2s}
+.btn-white{background:#fff;color:#000;border:none}.btn-white:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-outline:hover{color:var(--text);border-color:var(--bh);transform:translateY(-1px)}
+.hero-sub{font-size:12px;color:var(--faint);animation:fu 0.5s ease 0.5s both}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Features ── */
+.features{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)}
+.feature{padding:40px 36px;border-right:1px solid var(--border);transition:background 0.2s}.feature:last-child{border-right:none}.feature:hover{background:rgba(255,255,255,0.02)}
+.feat-icon{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:20px;transition:border-color 0.2s}.feature:hover .feat-icon{border-color:var(--bh)}
+.feat-icon svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.feature h3{font-size:13.5px;font-weight:500;margin-bottom:9px}
+.feature p{font-size:12.5px;color:var(--muted);line-height:1.7}
+
+/* ── Stats ── */
+.stats{display:flex;align-items:center;justify-content:space-around;padding:40px 48px;border-bottom:1px solid var(--border)}
+.stat-n{font-size:30px;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,var(--g1),var(--g3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-l{font-size:11.5px;color:var(--muted);margin-top:4px}
+.stat-div{width:1px;height:40px;background:var(--border)}
+
+/* ── How it works ── */
+.how{padding:80px 48px;border-bottom:1px solid var(--border)}
+.how-eyebrow{font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);text-align:center;margin-bottom:12px}
+.how h2{font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-1px;text-align:center;margin-bottom:48px;background:linear-gradient(135deg,var(--g1),var(--g3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:900px;margin:0 auto}
+.step{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all 0.2s}.step:hover{border-color:var(--bh);transform:translateY(-2px)}
+.step-n{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--faint);margin-bottom:12px}
+.step h4{font-size:14px;font-weight:600;letter-spacing:-0.3px;margin-bottom:8px}
+.step p{font-size:12.5px;color:var(--muted);line-height:1.65}
+
+/* ── CTA ── */
+.cta{display:flex;flex-direction:column;align-items:center;text-align:center;padding:88px 24px}
+.cta h2{font-size:clamp(24px,3.5vw,36px);font-weight:700;letter-spacing:-1.2px;margin-bottom:10px}
+.cta>p{font-size:14px;color:var(--muted);margin-bottom:30px}
+.email-row{display:flex;gap:8px;width:100%;max-width:420px}
+.email-inp{flex:1;font-family:var(--font);font-size:13.5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px 18px;color:var(--text);outline:none;transition:border-color 0.15s}
+.email-inp::placeholder{color:var(--faint)}.email-inp:focus{border-color:rgba(168,196,240,0.3)}
+.waitlist-ok{font-size:12px;color:#4ade80;margin-top:14px;display:none}
+
+/* ── Footer ── */
+.footer{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-top:1px solid var(--border)}
+.footer-copy{font-size:12px;color:var(--faint)}
+.footer-links{display:flex;gap:22px;font-size:12px;color:var(--faint)}
+.footer-links a{transition:color 0.15s}.footer-links a:hover{color:var(--muted)}
+
+@media(max-width:768px){
+  .nav{padding:16px 20px}.nav-links{display:none}
+  .hero{padding:70px 20px 60px}
+  .features{grid-template-columns:1fr}.feature{border-right:none;border-bottom:1px solid var(--border)}.feature:last-child{border-bottom:none}
+  .stats{flex-wrap:wrap;gap:28px;padding:36px 24px}.stat-div{display:none}
+  .steps{grid-template-columns:1fr}.how{padding:60px 24px}
+  .footer{flex-direction:column;gap:14px;text-align:center;padding:20px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <circle cx="13" cy="13" r="9" stroke="url(#nlg)" stroke-width="1.5"/>
+      <circle cx="13" cy="13" r="4.5" stroke="url(#nlg)" stroke-width="1" opacity="0.6"/>
+      <circle cx="13" cy="13" r="1.8" fill="url(#nlg)"/>
+      <line x1="19.5" y1="19.5" x2="25.5" y2="25.5" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      <defs><linearGradient id="nlg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stop-color="#a8c4f0"/><stop offset="100%" stop-color="#f5e6cc"/></linearGradient></defs>
+    </svg>
+    <span class="logo-b">Paper</span><span class="logo-l">Lens</span>
+  </div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-ghost" onclick="window.location.href='login.html'">Sign in</button>
+    <button class="btn-primary" onclick="window.location.href='signup.html'">Get started</button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><span class="badge-dot"></span>Now in public beta</div>
+  <h1>The sharpest way<br/><span class="muted">to stay ahead</span></h1>
+  <p>PaperLens tracks every AI/ML paper, news drop, and model release — then explains it all in plain language, so you never fall behind again.</p>
+  <div class="hero-actions">
+    <button class="btn-lg btn-white" onclick="window.location.href='signup.html'">Start for free</button>
+    <button class="btn-lg btn-outline" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See how it works</button>
+  </div>
+  <p class="hero-sub">No credit card required &nbsp;·&nbsp; Free plan available</p>
+</section>
+
+<section class="features" id="features">
+  <div class="feature">
+    <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <h3>Daily digest</h3>
+    <p>Every morning, the most important papers and news from arXiv, HuggingFace, and top company blogs — curated by AI, filtered by your topics.</p>
+  </div>
+  <div class="feature">
+    <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+    <h3>Paper Peeler</h3>
+    <p>Any research paper, fully unpacked — what came before, what problem it fixes, how the architecture works — explained in plain language.</p>
+  </div>
+  <div class="feature">
+    <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+    <h3>WhatsApp alerts</h3>
+    <p>Connect once and get instant notifications directly to WhatsApp when something big drops in your chosen topics.</p>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="stat"><div class="stat-n">2,400+</div><div class="stat-l">Papers tracked daily</div></div>
+  <div class="stat-div"></div>
+  <div class="stat"><div class="stat-n">18</div><div class="stat-l">Data sources</div></div>
+  <div class="stat-div"></div>
+  <div class="stat"><div class="stat-n">&lt;2min</div><div class="stat-l">Any paper explained</div></div>
+  <div class="stat-div"></div>
+  <div class="stat"><div class="stat-n">Free</div><div class="stat-l">To get started</div></div>
+</section>
+
+<section class="how" id="how">
+  <div class="how-eyebrow">How it works</div>
+  <h2>From paper to insight in minutes</h2>
+  <div class="steps">
+    <div class="step"><div class="step-n">STEP 01</div><h4>Pick your topics</h4><p>Choose the AI/ML areas you care about — LLMs, Computer Vision, RL, Diffusion and more. Takes 60 seconds.</p></div>
+    <div class="step"><div class="step-n">STEP 02</div><h4>We do the reading</h4><p>PaperLens tracks 18+ sources 24/7 and surfaces only what matters — no noise, no duplicates, no fluff.</p></div>
+    <div class="step"><div class="step-n">STEP 03</div><h4>Get it explained</h4><p>Any paper peeled open: prior work, the breakthrough, architecture, benchmarks — in plain language you actually understand.</p></div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Start reading smarter</h2>
+  <p>Join researchers, engineers and developers who use PaperLens daily.</p>
+  <div class="email-row">
+    <input class="email-inp" type="email" placeholder="Enter your email" id="w-email" onkeydown="if(event.key==='Enter')joinWaitlist()"/>
+    <button class="btn-lg btn-white" onclick="joinWaitlist()">Join waitlist</button>
+  </div>
+  <div class="waitlist-ok" id="w-ok">✓ You're on the list! We'll be in touch soon.</div>
+</section>
+
+<footer class="footer">
+  <span class="footer-copy">© 2025 PaperLens</span>
+  <div class="footer-links"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Contact</a></div>
+</footer>
+
+<script>
+function joinWaitlist(){
+  const inp=document.getElementById('w-email')
+  if(!inp.value||!inp.value.includes('@')){inp.style.borderColor='rgba(248,113,113,0.5)';setTimeout(()=>inp.style.borderColor='',1500);return}
+  document.getElementById('w-ok').style.display='block';inp.value=''
+}
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',function(e){
+    e.preventDefault()
+    const t=document.querySelector(this.getAttribute('href'))
+    if(t) t.scrollIntoView({behavior:'smooth'})
+  })
+})
+</script>
+</body>
+</html>

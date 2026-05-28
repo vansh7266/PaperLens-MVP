@@ -1,0 +1,26 @@
+# Secrets — NEVER commit these
+.env
+.env.local
+frontend/.env
+backend/.env
+
+# Dependencies
+backend/.venv/
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# System
+.DS_Store
+Thumbs.db
+
+# Claude Code / editor
+.claude/
+.playwright-cli/
+
+# Generated outputs / temp
+outputs/
+files/

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — PaperLens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #161616;
+      --surface3: #1a1a1a;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.15);
+      --text: #ffffff;
+      --text-muted: rgba(255,255,255,0.5);
+      --text-faint: rgba(255,255,255,0.25);
+      --grad-start: #a8c4f0;
+      --grad-mid: #e8d5b7;
+      --grad-end: #f5e6cc;
+      --success: #4ade80;
+      --danger: #f87171;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --sidebar-w: 240px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column; }
+    a { text-decoration: none; color: inherit; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    .app { display: flex; min-height: 100vh; }
+
+    /* ══ SIDEBAR ══ */
+    .sidebar { width: var(--sidebar-w); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; background: var(--bg); z-index: 50; }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
+    .logo-text { display: flex; align-items: baseline; }
+    .logo-text .bold { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .logo-text .light { font-size: 15px; font-weight: 300; letter-spacing: 3px; color: var(--text-muted); }
+    .sidebar-nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
+    .nav-section { font-size: 10px; font-weight: 600; letter-spacing: 1px; color: var(--text-faint); text-transform: uppercase; padding: 10px 10px 5px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 400; color: var(--text-muted); cursor: pointer; transition: all 0.15s; margin-bottom: 1px; text-decoration: none; }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--surface2); color: var(--text); font-weight: 500; }
+    .nav-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .topic-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sidebar-bottom { padding: 12px 10px; border-top: 1px solid var(--border); }
+    .user-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background 0.15s; }
+    .user-row:hover { background: var(--surface2); }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #000; flex-shrink: 0; }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-plan { font-size: 10.5px; color: var(--text-faint); }
+
+    /* ══ MAIN ══ */
+    .main { flex: 1; margin-left: var(--sidebar-w); display: flex; min-width: 0; }
+
+    /* ══ SETTINGS SIDEBAR ══ */
+    .settings-nav { width: 200px; border-right: 1px solid var(--border); padding: 24px 12px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .settings-nav-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 20px; padding: 0 8px; }
+    .settings-nav-section { font-size: 10px; font-weight: 600; letter-spacing: 1px; color: var(--text-faint); text-transform: uppercase; padding: 8px 8px 4px; margin-top: 8px; }
+    .settings-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 400; color: var(--text-muted); cursor: pointer; transition: all 0.15s; margin-bottom: 1px; }
+    .settings-nav-item:hover { background: var(--surface2); color: var(--text); }
+    .settings-nav-item.active { background: var(--surface2); color: var(--text); font-weight: 500; }
+    .settings-nav-item svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ══ CONTENT ══ */
+    .settings-content { flex: 1; padding: 32px 40px; max-width: 720px; overflow-y: auto; animation: fadeUp 0.4s ease both; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .section-header { margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .section-header h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 4px; }
+    .section-header p { font-size: 13px; color: var(--text-muted); }
+
+    /* ── Form rows ── */
+    .form-group { margin-bottom: 20px; }
+    .form-label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; display: block; }
+    .form-input { width: 100%; font-family: var(--font); font-size: 13.5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 11px 16px; color: var(--text); outline: none; transition: border-color 0.15s; }
+    .form-input::placeholder { color: var(--text-faint); }
+    .form-input:focus { border-color: rgba(168,196,240,0.35); }
+    .form-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-hint { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; }
+
+    /* ── Profile card ── */
+    .profile-card { display: flex; align-items: center; gap: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 24px; }
+    .profile-avatar-big { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #000; flex-shrink: 0; }
+    .profile-info { flex: 1; }
+    .profile-info h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 2px; }
+    .profile-info p { font-size: 12.5px; color: var(--text-faint); }
+    .btn-sm { font-family: var(--font); font-size: 12px; font-weight: 500; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .btn-sm:hover { color: var(--text); border-color: var(--border-hover); }
+
+    /* ── Setting row ── */
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 24px; }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row-left h4 { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .setting-row-left p { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
+
+    /* ── Toggle ── */
+    .toggle { width: 38px; height: 22px; border-radius: 11px; background: var(--surface3); border: 1px solid var(--border); cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle.on { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); border-color: transparent; }
+    .toggle-knob { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.5); top: 2px; left: 2px; transition: transform 0.2s, background 0.2s; }
+    .toggle.on .toggle-knob { transform: translateX(16px); background: #000; }
+
+    /* ── Plan cards ── */
+    .plan-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .plan-card { border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+    .plan-card:hover { border-color: var(--border-hover); }
+    .plan-card.current { border-color: rgba(168,196,240,0.3); background: rgba(168,196,240,0.03); }
+    .plan-card.popular { border-color: rgba(168,196,240,0.25); }
+    .plan-badge-popular { position: absolute; top: -1px; right: 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 0 0 6px 6px; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: #000; }
+    .plan-name { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 4px; }
+    .plan-price { font-size: 22px; font-weight: 700; letter-spacing: -1px; margin-bottom: 2px; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .plan-period { font-size: 11px; color: var(--text-faint); margin-bottom: 12px; }
+    .plan-features { display: flex; flex-direction: column; gap: 5px; }
+    .plan-feature { font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .plan-feature svg { width: 12px; height: 12px; stroke: var(--grad-start); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .plan-current-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 5px; background: rgba(168,196,240,0.1); color: var(--grad-start); border: 1px solid rgba(168,196,240,0.2); display: inline-block; margin-bottom: 8px; }
+
+    .btn-upgrade { width: 100%; font-family: var(--font); font-size: 13.5px; font-weight: 600; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: #000; border: none; border-radius: 10px; padding: 12px; cursor: pointer; transition: opacity 0.15s; margin-top: 8px; }
+    .btn-upgrade:hover { opacity: 0.88; }
+
+    /* ── Topics grid ── */
+    .topics-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .topic-chip { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .topic-chip:hover { border-color: var(--border-hover); color: var(--text); }
+    .topic-chip.selected { background: rgba(168,196,240,0.08); border-color: rgba(168,196,240,0.3); color: var(--text); }
+    .topic-chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── WhatsApp connect ── */
+    .whatsapp-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
+    .whatsapp-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .whatsapp-icon svg { width: 22px; height: 22px; }
+    .whatsapp-info { flex: 1; }
+    .whatsapp-info h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+    .whatsapp-info p { font-size: 12px; color: var(--text-faint); }
+    .btn-whatsapp { font-family: var(--font); font-size: 12.5px; font-weight: 600; padding: 8px 18px; border-radius: 9px; border: none; background: #25d366; color: #fff; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+    .btn-whatsapp:hover { opacity: 0.88; }
+    .connected-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success); }
+    .connected-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Danger zone ── */
+    .danger-card { border: 1px solid rgba(248,113,113,0.15); border-radius: 12px; padding: 18px 20px; }
+    .danger-card h4 { font-size: 13.5px; font-weight: 600; color: var(--danger); margin-bottom: 6px; }
+    .danger-card p { font-size: 12.5px; color: var(--text-faint); margin-bottom: 14px; line-height: 1.5; }
+    .btn-danger { font-family: var(--font); font-size: 12.5px; font-weight: 500; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(248,113,113,0.3); background: transparent; color: var(--danger); cursor: pointer; transition: all 0.15s; }
+    .btn-danger:hover { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.5); }
+
+    /* ── Save button ── */
+    .save-row { display: flex; align-items: center; justify-content: space-between; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .btn-save { font-family: var(--font); font-size: 13px; font-weight: 600; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: #000; border: none; border-radius: 9px; padding: 10px 22px; cursor: pointer; transition: opacity 0.15s; }
+    .btn-save:hover { opacity: 0.88; }
+    .save-msg { font-size: 12px; color: var(--success); display: none; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Alert ── */
+    .alert { padding: 11px 14px; border-radius: 9px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert-error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #f87171; }
+    .alert-success { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.2); color: #4ade80; }
+
+    /* ── Usage bar ── */
+    .usage-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+    .usage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .usage-label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+    .usage-count { font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .usage-bar { height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .usage-fill { height: 100%; border-radius: 3px; background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); transition: width 0.5s ease; }
+    .usage-hint { font-size: 11px; color: var(--text-faint); margin-top: 7px; }
+
+    @media (max-width: 1024px) { .plan-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; }
+      .settings-nav { display: none; }
+      .settings-content { padding: 24px 20px; }
+      .plan-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  
+
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ APP SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="7.5" stroke="url(#slg)" stroke-width="1.5"/>
+        <circle cx="11" cy="11" r="3.5" stroke="url(#slg)" stroke-width="1" opacity="0.6"/>
+        <circle cx="11" cy="11" r="1.4" fill="url(#slg)"/>
+        <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+        <defs>
+          <linearGradient id="slg" x1="0" y1="0" x2="24" y2="24">
+            <stop offset="0%" stop-color="#a8c4f0"/>
+            <stop offset="100%" stop-color="#f5e6cc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="logo-text"><span class="bold">Paper</span><span class="light">Lens</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <a class="nav-item" href="dashboard.html"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Feed</a>
+      <a class="nav-item" href="peeler.html"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Paper Peeler</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved papers</a>
+      <a class="nav-item active" href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+      <div class="nav-section">Topics</div>
+      <div class="nav-item"><span class="topic-dot" style="background:#a8c4f0"></span>LLMs</div>
+      <div class="nav-item"><span class="topic-dot" style="background:#f0a8c4"></span>Computer Vision</div>
+      <div class="nav-item"><span class="topic-dot" style="background:#a8f0c4"></span>RL / Agents</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Loading...</div>
+          <div class="user-plan" id="user-plan">Free plan</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <!-- Settings nav -->
+    <div class="settings-nav">
+      <div class="settings-nav-title">Settings</div>
+
+      <div class="settings-nav-section">Account</div>
+      <div class="settings-nav-item active" onclick="showSection('profile', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </div>
+      <div class="settings-nav-item" onclick="showSection('plan', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Plan & billing
+      </div>
+      <div class="settings-nav-item" onclick="showSection('usage', this)">
+        <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        Usage
+      </div>
+
+      <div class="settings-nav-section">Preferences</div>
+      <div class="settings-nav-item" onclick="showSection('topics', this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Topics
+      </div>
+      <div class="settings-nav-item" onclick="showSection('notifications', this)">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Notifications
+      </div>
+      <div class="settings-nav-item" onclick="showSection('whatsapp', this)">
+        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        WhatsApp
+      </div>
+
+      <div class="settings-nav-section">Security</div>
+      <div class="settings-nav-item" onclick="showSection('security', this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Password
+      </div>
+      <div class="settings-nav-item" onclick="signOut()" style="margin-top:auto; color:var(--danger)">
+        <svg viewBox="0 0 24 24" style="stroke:#f87171"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
+      </div>
+    </div>
+
+    <!-- Settings content -->
+    <div class="settings-content">
+
+      <!-- ── PROFILE ── -->
+      <div class="section active" id="section-profile">
+        <div class="section-header">
+          <h2>Profile</h2>
+          <p>Manage your name, email, and profile photo</p>
+        </div>
+
+        <div class="alert alert-error" id="profile-error"></div>
+        <div class="alert alert-success" id="profile-success"></div>
+
+        <div class="profile-card">
+          <div class="profile-avatar-big" id="profile-avatar-big">?</div>
+          <div class="profile-info">
+            <h3 id="profile-name-display">Loading...</h3>
+            <p id="profile-email-display">loading...</p>
+          </div>
+          <button class="btn-sm">Change photo</button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First name</label>
+            <input class="form-input" type="text" id="first-name" placeholder="Aryan"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last name</label>
+            <input class="form-input" type="text" id="last-name" placeholder="Kumar"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input class="form-input" type="email" id="email" disabled/>
+          <div class="form-hint">Email cannot be changed. Contact support if needed.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Bio (optional)</label>
+          <input class="form-input" type="text" id="bio" placeholder="ML researcher, PhD student..."/>
+        </div>
+
+        <div class="save-row">
+          <span class="save-msg" id="profile-save-msg">✓ Changes saved</span>
+          <button class="btn-save" onclick="saveProfile()">Save changes</button>
+        </div>
+      </div>
+
+      <!-- ── PLAN & BILLING ── -->
+      <div class="section" id="section-plan">
+        <div class="section-header">
+          <h2>Plan & billing</h2>
+          <p>Manage your subscription and payment method</p>
+        </div>
+
+        <div class="plan-grid">
+          <div class="plan-card current" id="plan-free">
+            <div class="plan-current-badge" id="free-current-badge">Current plan</div>
+            <div class="plan-name">Free</div>
+            <div class="plan-price">$0</div>
+            <div class="plan-period">forever</div>
+            <div class="plan-features">
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Daily digest</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>5 Paper Peels/mo</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Email notifications</div>
+              <div class="plan-feature" style="color:var(--text-faint)"><svg viewBox="0 0 12 12" style="stroke:var(--text-faint)"><polyline points="2 6 5 9 10 3"/></svg>WhatsApp locked</div>
+            </div>
+          </div>
+
+          <div class="plan-card popular" id="plan-pro">
+            <div class="plan-badge-popular">POPULAR</div>
+            <div class="plan-name">Pro</div>
+            <div class="plan-price">$9</div>
+            <div class="plan-period">per month</div>
+            <div class="plan-features">
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Everything in Free</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Unlimited peels</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>WhatsApp integration</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Instant alerts</div>
+            </div>
+            <button class="btn-upgrade" onclick="upgradePlan('pro')">Upgrade to Pro</button>
+          </div>
+
+          <div class="plan-card" id="plan-team">
+            <div class="plan-name">Team</div>
+            <div class="plan-price">$29</div>
+            <div class="plan-period">per month</div>
+            <div class="plan-features">
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Everything in Pro</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Up to 5 members</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>API access</div>
+              <div class="plan-feature"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>Priority support</div>
+            </div>
+            <button class="btn-upgrade" onclick="upgradePlan('team')">Upgrade to Team</button>
+          </div>
+        </div>
+
+        <div class="form-hint" style="margin-top:4px">Payments powered by Stripe · Cancel anytime · No hidden fees</div>
+      </div>
+
+      <!-- ── USAGE ── -->
+      <div class="section" id="section-usage">
+        <div class="section-header">
+          <h2>Usage</h2>
+          <p>Track your monthly usage across all features</p>
+        </div>
+
+        <div class="usage-card">
+          <div class="usage-header">
+            <span class="usage-label">Paper Peels this month</span>
+            <span class="usage-count">3 / 5</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill" style="width:60%"></div></div>
+          <div class="usage-hint">Resets on 1st of every month · Upgrade to Pro for unlimited peels</div>
+        </div>
+
+        <div class="usage-card">
+          <div class="usage-header">
+            <span class="usage-label">Ask anything queries</span>
+            <span class="usage-count">12 / 50</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill" style="width:24%"></div></div>
+          <div class="usage-hint">50 queries/month on Free plan</div>
+        </div>
+
+        <div class="usage-card">
+          <div class="usage-header">
+            <span class="usage-label">Saved papers</span>
+            <span class="usage-count">8 / 20</span>
+          </div>
+          <div class="usage-bar"><div class="usage-fill" style="width:40%"></div></div>
+          <div class="usage-hint">20 saved papers on Free plan</div>
+        </div>
+
+        <button class="btn-upgrade" onclick="showSection('plan', document.querySelector('[onclick*=plan]'))">Upgrade for unlimited →</button>
+      </div>
+
+      <!-- ── TOPICS ── -->
+      <div class="section" id="section-topics">
+        <div class="section-header">
+          <h2>Topics</h2>
+          <p>Choose what you want in your daily digest and alerts</p>
+        </div>
+
+        <div class="topics-grid" id="topics-grid">
+          <div class="topic-chip selected" onclick="toggleTopic(this)" data-topic="llm"><span class="dot" style="background:#a8c4f0"></span>LLMs</div>
+          <div class="topic-chip selected" onclick="toggleTopic(this)" data-topic="cv"><span class="dot" style="background:#f0a8c4"></span>Computer Vision</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="rl"><span class="dot" style="background:#a8f0c4"></span>RL / Agents</div>
+          <div class="topic-chip selected" onclick="toggleTopic(this)" data-topic="diffusion"><span class="dot" style="background:#f0d5a8"></span>Diffusion Models</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="nlp"><span class="dot" style="background:#c4a8f0"></span>NLP</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="multimodal"><span class="dot" style="background:#a8d4f0"></span>Multimodal</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="robotics"><span class="dot" style="background:#f0c4a8"></span>Robotics</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="mlops"><span class="dot" style="background:#d4f0a8"></span>MLOps</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="interpretability"><span class="dot" style="background:#f0a8d4"></span>Interpretability</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="efficiency"><span class="dot" style="background:#a8f0d4"></span>Model efficiency</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="safety"><span class="dot" style="background:#f0f0a8"></span>AI Safety</div>
+          <div class="topic-chip" onclick="toggleTopic(this)" data-topic="benchmark"><span class="dot" style="background:#d4a8f0"></span>Benchmarks</div>
+        </div>
+
+        <div class="save-row">
+          <span class="save-msg" id="topics-save-msg">✓ Topics saved</span>
+          <button class="btn-save" onclick="saveTopics()">Save topics</button>
+        </div>
+      </div>
+
+      <!-- ── NOTIFICATIONS ── -->
+      <div class="section" id="section-notifications">
+        <div class="section-header">
+          <h2>Notifications</h2>
+          <p>Control how and when PaperLens reaches you</p>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Daily digest email</h4>
+            <p>Receive a morning summary of top papers and news every day at 7am</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Instant alerts</h4>
+            <p>Get notified immediately when a significant paper drops in your topics</p>
+          </div>
+          <div class="toggle" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Paper Peeler ready</h4>
+            <p>Alert when a new paper in your topics has been fully peeled</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Weekly trend report</h4>
+            <p>Every Sunday — top 5 AI/ML developments of the week</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>WhatsApp notifications</h4>
+            <p>Receive digest and alerts on WhatsApp (requires WhatsApp to be connected)</p>
+          </div>
+          <div class="toggle" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Product updates</h4>
+            <p>New features, improvements, and announcements from PaperLens</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="save-row">
+          <span class="save-msg" id="notif-save-msg">✓ Preferences saved</span>
+          <button class="btn-save" onclick="saveNotifications()">Save preferences</button>
+        </div>
+      </div>
+
+      <!-- ── WHATSAPP ── -->
+      <div class="section" id="section-whatsapp">
+        <div class="section-header">
+          <h2>WhatsApp</h2>
+          <p>Connect WhatsApp to get your digest and chat with the agent directly</p>
+        </div>
+
+        <div class="whatsapp-card" style="margin-bottom:20px">
+          <div class="whatsapp-icon">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="#25d366"/>
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.526 3.655 1.438 5.168L2 22l4.978-1.406A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" stroke="#25d366" stroke-width="1.5" fill="none"/>
+            </svg>
+          </div>
+          <div class="whatsapp-info">
+            <h4>Connect your WhatsApp</h4>
+            <p>Get daily digest, instant alerts, and chat with Paper Peeler directly in WhatsApp</p>
+          </div>
+          <button class="btn-whatsapp" onclick="connectWhatsApp()">Connect</button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Daily digest on WhatsApp</h4>
+            <p>Receive morning summary directly in your WhatsApp</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Instant alerts on WhatsApp</h4>
+            <p>Get pinged the moment something big drops in your topics</p>
+          </div>
+          <div class="toggle" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row-left">
+            <h4>Chat with agent on WhatsApp</h4>
+            <p>Ask the agent questions directly from WhatsApp — full Paper Peeler access</p>
+          </div>
+          <div class="toggle on" onclick="toggleSetting(this)"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- ── SECURITY ── -->
+      <div class="section" id="section-security">
+        <div class="section-header">
+          <h2>Password & security</h2>
+          <p>Update your password and manage account security</p>
+        </div>
+
+        <div class="alert alert-error" id="security-error"></div>
+        <div class="alert alert-success" id="security-success"></div>
+
+        <div class="form-group">
+          <label class="form-label">Current password</label>
+          <input class="form-input" type="password" id="current-password" placeholder="Enter current password"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New password</label>
+          <input class="form-input" type="password" id="new-password" placeholder="Min. 8 characters"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm new password</label>
+          <input class="form-input" type="password" id="confirm-password" placeholder="Repeat new password"/>
+        </div>
+
+        <div class="save-row" style="margin-bottom:32px">
+          <span class="save-msg" id="security-save-msg">✓ Password updated</span>
+          <button class="btn-save" onclick="changePassword()">Update password</button>
+        </div>
+
+        <div class="section-header" style="margin-top:0">
+          <h2 style="font-size:15px;color:var(--danger)">Danger zone</h2>
+          <p>Irreversible actions — please proceed carefully</p>
+        </div>
+
+        <div class="danger-card" style="margin-bottom:10px">
+          <h4>Delete all data</h4>
+          <p>Permanently delete all your saved papers, peels, chat history, and preferences. Your account remains active.</p>
+          <button class="btn-danger" onclick="deleteData()">Delete all my data</button>
+        </div>
+
+        <div class="danger-card">
+          <h4>Delete account</h4>
+          <p>Permanently delete your PaperLens account and all associated data. This cannot be undone.</p>
+          <button class="btn-danger" onclick="deleteAccount()">Delete my account</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── Supabase Init ─────────────────────────────────────────
+  // PRIMARY: Claude API — TESTING: Gemini (free tier)
+  const SUPABASE_URL = 'https://vsrtfsietsbvvucbwzkr.supabase.co'
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+  // ─── Auth guard ────────────────────────────────────────────
+  async function init() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = 'login.html'; return }
+
+      const user = session.user
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0]
+      const firstName = user.user_metadata?.first_name || name.split(' ')[0] || ''
+      const lastName  = user.user_metadata?.last_name  || name.split(' ')[1] || ''
+      const initials  = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
+      const plan      = user.user_metadata?.plan || 'free'
+
+      // Sidebar
+      document.getElementById('user-name').textContent = name
+      document.getElementById('user-avatar').textContent = initials
+      document.getElementById('user-plan').textContent = plan === 'pro' ? 'Pro plan' : 'Free plan'
+
+      // Profile section
+      document.getElementById('profile-avatar-big').textContent = initials
+      document.getElementById('profile-name-display').textContent = name
+      document.getElementById('profile-email-display').textContent = user.email
+      document.getElementById('first-name').value = firstName
+      document.getElementById('last-name').value  = lastName
+      document.getElementById('email').value       = user.email
+      document.getElementById('bio').value         = user.user_metadata?.bio || ''
+
+    } catch(e) { window.location.href = 'login.html' }
+  }
+
+  // ─── Section switching ─────────────────────────────────────
+  function showSection(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'))
+    document.getElementById('section-' + id).classList.add('active')
+    if (el) el.classList.add('active')
+  }
+
+  // ─── Toggle ────────────────────────────────────────────────
+  function toggleSetting(el) {
+    el.classList.toggle('on')
+  }
+
+  // ─── Topic toggle ──────────────────────────────────────────
+  function toggleTopic(el) {
+    el.classList.toggle('selected')
+  }
+
+  // ─── Save profile ──────────────────────────────────────────
+  async function saveProfile() {
+    const firstName = document.getElementById('first-name').value.trim()
+    const lastName  = document.getElementById('last-name').value.trim()
+    const bio       = document.getElementById('bio').value.trim()
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: `${firstName} ${lastName}`.trim(),
+          first_name: firstName,
+          last_name: lastName,
+          bio: bio,
+        }
+      })
+
+      if (error) {
+        document.getElementById('profile-error').textContent = error.message
+        document.getElementById('profile-error').style.display = 'block'
+        return
+      }
+
+      // Update display
+      document.getElementById('profile-name-display').textContent = `${firstName} ${lastName}`.trim()
+      const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase()
+      document.getElementById('profile-avatar-big').textContent = initials
+      document.getElementById('user-avatar').textContent = initials
+      document.getElementById('user-name').textContent = `${firstName} ${lastName}`.trim()
+
+      showSaveMsg('profile-save-msg')
+    } catch(e) {
+      document.getElementById('profile-error').textContent = 'Could not save changes. Try again.'
+      document.getElementById('profile-error').style.display = 'block'
+    }
+  }
+
+  // ─── Save topics ───────────────────────────────────────────
+  async function saveTopics() {
+    const selected = [...document.querySelectorAll('.topic-chip.selected')].map(el => el.dataset.topic)
+    try {
+      await supabase.auth.updateUser({ data: { topics: selected } })
+      showSaveMsg('topics-save-msg')
+    } catch(e) {}
+  }
+
+  // ─── Save notifications ────────────────────────────────────
+  function saveNotifications() {
+    // TODO: save to Supabase user preferences
+    showSaveMsg('notif-save-msg')
+  }
+
+  // ─── Change password ───────────────────────────────────────
+  async function changePassword() {
+    const current  = document.getElementById('current-password').value
+    const newPass  = document.getElementById('new-password').value
+    const confirm  = document.getElementById('confirm-password').value
+
+    if (!newPass || newPass.length < 8) {
+      document.getElementById('security-error').textContent = 'New password must be at least 8 characters.'
+      document.getElementById('security-error').style.display = 'block'
+      return
+    }
+    if (newPass !== confirm) {
+      document.getElementById('security-error').textContent = 'Passwords do not match.'
+      document.getElementById('security-error').style.display = 'block'
+      return
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPass })
+      if (error) {
+        document.getElementById('security-error').textContent = error.message
+        document.getElementById('security-error').style.display = 'block'
+        return
+      }
+      document.getElementById('security-error').style.display = 'none'
+      document.getElementById('current-password').value = ''
+      document.getElementById('new-password').value = ''
+      document.getElementById('confirm-password').value = ''
+      showSaveMsg('security-save-msg')
+    } catch(e) {
+      document.getElementById('security-error').textContent = 'Could not update password.'
+      document.getElementById('security-error').style.display = 'block'
+    }
+  }
+
+  // ─── Upgrade plan ──────────────────────────────────────────
+  function upgradePlan(plan) {
+    // TODO Phase 9: redirect to Stripe checkout
+    alert(`Stripe checkout for ${plan} plan — coming in Phase 9!`)
+  }
+
+  // ─── WhatsApp connect ──────────────────────────────────────
+  function connectWhatsApp() {
+    // TODO Phase 8: initiate WhatsApp Business API connection flow
+    alert('WhatsApp connection flow — coming in Phase 8!')
+  }
+
+  // ─── Delete ────────────────────────────────────────────────
+  function deleteData() {
+    if (confirm('Are you sure? This will permanently delete all your saved papers, peels, and chat history.')) {
+      alert('Data deletion requested. (Backend integration in Phase 4)')
+    }
+  }
+
+  function deleteAccount() {
+    if (confirm('Are you absolutely sure? Your account and ALL data will be permanently deleted. This cannot be undone.')) {
+      alert('Account deletion requested. (Backend integration in Phase 4)')
+    }
+  }
+
+  // ─── Sign out ──────────────────────────────────────────────
+  async function signOut() {
+    await supabase.auth.signOut()
+    window.location.href = 'login.html'
+  }
+
+  // ─── Helper ────────────────────────────────────────────────
+  function showSaveMsg(id) {
+    const el = document.getElementById(id)
+    el.style.display = 'block'
+    setTimeout(() => el.style.display = 'none', 3000)
+  }
+
+  // ─── Start ─────────────────────────────────────────────────
+  init()
+</script>
+
+</body>
+</html>
