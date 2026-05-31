@@ -1785,7 +1785,6 @@
     } else if (name === "math") {
       const equations = state.currentPeel ? (state.currentPeel.math_peel || []) : [];
       v7_renderMathTutor(equations);
-      v7_initMathBg();
     } else if (name === "chat") {
       // chat content already pre-rendered; just focus the input
       setTimeout(() => {
@@ -1837,7 +1836,7 @@
     const flow = document.getElementById("tutorFlow");
     if (flow) flow.scrollTop = 0;
     // Also scroll the page itself to the top so architecture canvas is fully visible
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
 
     // Expose the active stage to CSS so per-window chrome (e.g. result-hero)
     // can show/hide cleanly without JS coordination.

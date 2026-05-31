@@ -3778,29 +3778,7 @@ code, kbd { font-family: var(--mono); }
   border-color: var(--g1);
   box-shadow: 0 0 6px rgba(168,196,240,0.5);
 }
-/* Flow panel locked until 3 plays */
-#archFlowPanel { opacity: 0; pointer-events: none; transform: translateY(12px); transition: all 0.5s ease; }
-#archFlowPanel.is-unlocked { opacity: 1; pointer-events: auto; transform: translateY(0); }
-
-#stageMath .stage-bg-3d { display: none; }
-
-/* New math 3D canvas — covers the viewport behind everything */
-#mathThreeCanvas {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  pointer-events: none;
-  display: none; /* shown only when the Math window is active (rule below) */
-  opacity: 0.18; /* dimmed so content cards stay readable */
-}
-/* Hide the global citation-network canvas when Math is the active stage,
-   and reveal the math-themed canvas in its place.
-   The !important is required because the citation script sets the canvas
-   display via inline style, which would otherwise beat this rule. */
-body:has(#resultScreen[data-active-stage="math"]) #threeCanvas     { display: none !important; }
-body:has(#resultScreen[data-active-stage="math"]) #mathThreeCanvas { display: block !important; }
+#archFlowPanel { opacity: 1; pointer-events: auto; transform: none; }
 
 /* ─── 29. Chat logo avatar ─── */
 .chat-msg-assistant-avatar.logo-avatar {

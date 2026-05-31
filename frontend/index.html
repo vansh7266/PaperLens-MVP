@@ -490,29 +490,28 @@ async function initHeroBg(){
     camera.lookAt(0, 0, 0);
     const root = new THREE.Group(); scene.add(root);
 
-    // BACKGROUND PARTICLE FIELD (Floating star field/dots)
+    // BACKGROUND DOTS — spread across full viewport
     const PC = 180;
     const partGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(PC * 3);
-    for(let i = 0; i < PC; i++){
-      const r = 8 + Math.random() * 12;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = (Math.random() - 0.5) * Math.PI * 0.95;
-      positions[i*3]     = Math.cos(theta) * r * Math.cos(phi);
-      positions[i*3 + 1] = Math.sin(phi) * r;
-      positions[i*3 + 2] = Math.sin(theta) * r * Math.cos(phi);
+    let filled = 0;
+    while(filled < PC){
+      const x = (Math.random() - 0.5) * 30;
+      const y = (Math.random() - 0.5) * 18;
+      const z = (Math.random() - 0.5) * 8 - 2;
+      if(x*x + y*y < 14) continue; // keep center clear for lens
+      positions[filled*3]   = x;
+      positions[filled*3+1] = y;
+      positions[filled*3+2] = z;
+      filled++;
     }
     partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const particles = new THREE.Points(partGeo, new THREE.PointsMaterial({
-      color: 0xa8c4f0,
-      size: 1.2,
-      transparent: true,
-      opacity: 0.38,
-      sizeAttenuation: false
+      color:0xa8c4f0, size:1.2, transparent:true, opacity:0.32, sizeAttenuation:false
     }));
     root.add(particles);
 
-    // START POSITIONS — globe shape, scatter to random field over 2.5s
+    // GLOBE → SCATTER start positions
     const startPos = new Float32Array(PC * 3);
     const gd = window._plGlobeDots;
     for(let i = 0; i < PC; i++){
@@ -528,22 +527,17 @@ async function initHeroBg(){
     for(let i = 0; i < PC; i++) posAttr.setXYZ(i, startPos[i*3], startPos[i*3+1], startPos[i*3+2]);
     posAttr.needsUpdate = true;
 
-    // CONSTELLATION LINES (Option D) — faint edges between nearby dots, fade in/out
-    const dotPts = Array.from({length:PC}, (_,i) => new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]));
-    const pairs = [];
-    const MAX_D2 = 4.5 * 4.5;
-    for(let i = 0; i < PC; i++)
-      for(let j = i+1; j < PC; j++)
-        if(dotPts[i].distanceToSquared(dotPts[j]) < MAX_D2) pairs.push([i,j]);
-
-    const conLines = Array.from({length:12}, (_,k) => {
-      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-      const mat = new THREE.LineBasicMaterial({ color:k%3===2?0xe8d5b7:0xa8c4f0, transparent:true, opacity:0, depthWrite:false });
-      const line = new THREE.Line(geo, mat);
-      root.add(line);
-      return { geo, mat, pairIdx:Math.floor(Math.random()*Math.max(1,pairs.length)),
-               phase:Math.random()*10, duration:8+Math.random()*6, maxOp:0.14+Math.random()*0.18 };
-    });
+    // LENS SHAPE — PaperLens logo dots, static at center, fades in after scatter
+    const lensPos = [];
+    const LR = 3.0, LR2 = 1.5;
+    for(let i = 0; i < 24; i++){ const a=(i/24)*Math.PI*2; lensPos.push(Math.cos(a)*LR, Math.sin(a)*LR, 0); }
+    for(let i = 0; i < 12; i++){ const a=(i/12)*Math.PI*2; lensPos.push(Math.cos(a)*LR2, Math.sin(a)*LR2, 0); }
+    lensPos.push(0, 0, 0);
+    for(let i = 1; i <= 5; i++){ lensPos.push(LR*0.707+i*0.7, -LR*0.707-i*0.7, 0); }
+    const lensGeo = new THREE.BufferGeometry();
+    lensGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lensPos), 3));
+    const lensMat = new THREE.PointsMaterial({color:0xa8c4f0, size:1.8, transparent:true, opacity:0, sizeAttenuation:false});
+    scene.add(new THREE.Points(lensGeo, lensMat)); // scene (not root) — lens stays centred, doesn't rotate
 
     function onResize(){
       const w = W(), h = H();
@@ -573,28 +567,11 @@ async function initHeroBg(){
         pa.needsUpdate = true;
       }
 
-      // Rotate everything together
+      // Rotate background dots
       root.rotation.y = -t * 0.018;
 
-      // Constellation lines — only activate after scatter finishes
-      if(pairs.length > 0 && t > 2.0) conLines.forEach(cl => {
-        cl.phase += dt;
-        if(cl.phase >= cl.duration){
-          cl.phase -= cl.duration;
-          cl.pairIdx = Math.floor(Math.random() * pairs.length);
-          cl.maxOp = 0.14 + Math.random() * 0.18;
-        }
-        const prog = cl.phase / cl.duration;
-        const op = prog < 0.2 ? (prog/0.2)*cl.maxOp : prog < 0.8 ? cl.maxOp : ((1-prog)/0.2)*cl.maxOp;
-        cl.mat.opacity = op;
-        if(op > 0.01){
-          const [a,b] = pairs[cl.pairIdx];
-          const pa = cl.geo.attributes.position;
-          pa.setXYZ(0, dotPts[a].x, dotPts[a].y, dotPts[a].z);
-          pa.setXYZ(1, dotPts[b].x, dotPts[b].y, dotPts[b].z);
-          pa.needsUpdate = true;
-        }
-      });
+      // Lens fades in after scatter finishes
+      lensMat.opacity = t < 1.5 ? 0 : Math.min(0.55, (t - 1.5) / 1.5 * 0.55);
 
       renderer.render(scene, camera);
       requestAnimationFrame(tick);

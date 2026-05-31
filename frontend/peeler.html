@@ -20,7 +20,6 @@
 
   <!-- Three.js citation network background -->
   <canvas id="threeCanvas" aria-hidden="true"></canvas>
-  <canvas id="mathThreeCanvas" aria-hidden="true"></canvas>
 
   <!-- Ambient backdrop -->
   <div class="backdrop-glow" aria-hidden="true"></div>
@@ -708,7 +707,7 @@ try {
 </script>
 
 <script type="module">
-/* Math stage wave surface background */
+/* Math stage wave surface background — removed; original CSS grid restored */
 window.v7_initMathBg = async function() {
   const canvas = document.getElementById('mathThreeCanvas');
   if (!canvas || canvas.dataset.mathInit) return;
