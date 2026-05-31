@@ -133,6 +133,7 @@ async def resolve_doi(raw: str) -> PaperRecord | None:
 async def search_title(query: str) -> list[PaperRecord]:
     if len(query.strip()) < 3:
         return []
+    # Primary: Semantic Scholar (richer metadata when it works)
     try:
         url = "https://api.semanticscholar.org/graph/v1/paper/search"
         params = {
@@ -144,37 +145,124 @@ async def search_title(query: str) -> list[PaperRecord]:
             response = await client.get(url, params=params)
             response.raise_for_status()
             data = response.json().get("data", [])
-        papers = []
-        for item in data:
-            external = item.get("externalIds") or {}
-            arxiv_id = external.get("ArXiv")
-            doi = external.get("DOI")
-            canonical = f"arxiv:{arxiv_id}" if arxiv_id else f"semantic:{item.get('paperId')}"
-            papers.append(
-                PaperRecord(
-                    canonical_id=canonical,
-                    source_type="title",
-                    title=item.get("title") or query,
-                    authors=[author.get("name", "") for author in item.get("authors", [])],
-                    abstract=item.get("abstract") or "",
-                    source_url=item.get("url"),
-                    pdf_url=f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else None,
-                    arxiv_id=arxiv_id,
-                    doi=doi,
-                    published_at=str(item.get("year")) if item.get("year") else None,
-                    confidence=Confidence.MEDIUM,
+        if data:
+            papers = []
+            for item in data:
+                external = item.get("externalIds") or {}
+                arxiv_id = external.get("ArXiv")
+                doi = external.get("DOI")
+                canonical = f"arxiv:{arxiv_id}" if arxiv_id else f"semantic:{item.get('paperId')}"
+                papers.append(
+                    PaperRecord(
+                        canonical_id=canonical,
+                        source_type="title",
+                        title=item.get("title") or query,
+                        authors=[author.get("name", "") for author in item.get("authors", [])],
+                        abstract=item.get("abstract") or "",
+                        source_url=item.get("url"),
+                        pdf_url=f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else None,
+                        arxiv_id=arxiv_id,
+                        doi=doi,
+                        published_at=str(item.get("year")) if item.get("year") else None,
+                        confidence=Confidence.MEDIUM,
+                    )
                 )
-            )
-        return papers
+            return papers
     except Exception:
-        return [
-            PaperRecord(
-                canonical_id=f"title:{re.sub(r'[^a-z0-9]+', '-', query.lower()).strip('-')[:80]}",
-                source_type="title",
-                title=query,
-                confidence=Confidence.LOW,
-            )
+        pass
+
+    # Fallback: arXiv search API (open, reliable — gives us a real title + authors)
+    arxiv_papers = await _search_arxiv_by_title(query)
+    if arxiv_papers:
+        return arxiv_papers
+
+    # Last resort: title-case the user's typed string so it at least looks like a title
+    return [
+        PaperRecord(
+            canonical_id=f"title:{re.sub(r'[^a-z0-9]+', '-', query.lower()).strip('-')[:80]}",
+            source_type="title",
+            title=_smart_title_case(query),
+            confidence=Confidence.LOW,
+        )
+    ]
+
+
+async def _search_arxiv_by_title(query: str) -> list[PaperRecord]:
+    """Search arXiv by title. Returns up to 3 candidates with proper title + authors."""
+    cleaned = re.sub(r"\s+", " ", query.strip())
+    if not cleaned:
+        return []
+    # AND across title words (un-quoted) — surfaces canonical matches even when
+    # the user's wording is sloppy (e.g. "attention all you need" should still
+    # hit "Attention Is All You Need").
+    words = [w for w in re.split(r"\s+", cleaned) if w]
+    search_query = " AND ".join(f"ti:{w}" for w in words) if words else f"ti:{cleaned}"
+    url = (
+        "https://export.arxiv.org/api/query"
+        f"?search_query={quote(search_query)}"
+        "&start=0&max_results=3&sortBy=relevance&sortOrder=descending"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            text = response.text
+    except Exception:
+        return []
+
+    # Split into <entry>...</entry> blocks
+    entries = re.findall(r"<entry>(.*?)</entry>", text, flags=re.DOTALL)
+    papers: list[PaperRecord] = []
+    for entry in entries:
+        id_match = re.search(r"<id>\s*http[s]?://arxiv\.org/abs/([^<\s]+)\s*</id>", entry)
+        if not id_match:
+            continue
+        raw_id = id_match.group(1).strip()
+        arxiv_id = re.sub(r"v\d+$", "", raw_id)
+        title = _clean_xml(_between(entry, "<title>", "</title>") or "")
+        summary = _clean_xml(_between(entry, "<summary>", "</summary>") or "")
+        authors = [
+            _clean_xml(a)
+            for a in re.findall(r"<author>\s*<name>(.*?)</name>\s*</author>", entry, flags=re.DOTALL)
         ]
+        published = _between(entry, "<published>", "</published>")
+        year = published[:4] if published else None
+        papers.append(
+            PaperRecord(
+                canonical_id=f"arxiv:{arxiv_id}",
+                source_type="title",
+                title=title or _smart_title_case(query),
+                authors=authors,
+                abstract=summary,
+                source_url=f"https://arxiv.org/abs/{arxiv_id}",
+                pdf_url=f"https://arxiv.org/pdf/{arxiv_id}",
+                arxiv_id=arxiv_id,
+                published_at=year,
+                confidence=Confidence.HIGH,
+            )
+        )
+    return papers
+
+
+_SMALL_WORDS = {"a", "an", "the", "and", "or", "but", "for", "nor", "on", "at",
+                "to", "by", "of", "in", "is", "as", "it"}
+
+
+def _smart_title_case(text: str) -> str:
+    words = re.split(r"(\s+)", text.strip())
+    out = []
+    word_index = 0
+    for token in words:
+        if token.isspace() or not token:
+            out.append(token)
+            continue
+        lower = token.lower()
+        if word_index > 0 and lower in _SMALL_WORDS:
+            out.append(lower)
+        else:
+            out.append(token[:1].upper() + token[1:].lower() if len(token) > 1 else token.upper())
+        word_index += 1
+    return "".join(out)
 
 
 def _between(text: str, start: str, end: str, occurrence: int = 0) -> str | None:

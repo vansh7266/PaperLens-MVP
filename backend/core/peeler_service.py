@@ -141,11 +141,14 @@ class PeelerService:
             raise ThreadAccessError("Paper context is unavailable")
         chunks = await self.repo.get_chunks(thread.paper_id)
 
+        # Fetch prior history BEFORE appending the new user message
+        history = await self.repo.get_thread_messages(thread_id, limit=20)
+
         await self.repo.add_message(thread_id, ChatMessage(role="user", content=question))
         if self.chat_generator:
             answer = await _maybe_await(self.chat_generator(thread_id, question))
         else:
-            answer = await generate_openai_chat(paper, peel, chunks, question)
+            answer = await generate_openai_chat(paper, peel, chunks, question, history=history)
         await self.repo.add_message(thread_id, ChatMessage(role="assistant", content=answer))
         await self.repo.increment_chat_messages(user_id)
         return answer

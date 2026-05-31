@@ -352,9 +352,9 @@ class PeelOutput(BaseModel):
     @field_validator("math_peel")
     @classmethod
     def cap_math_peel(cls, value: list[MathPeelEquation]) -> list[MathPeelEquation]:
-        if len(value) > 5:
-            raise ValueError("Math Peel should include at most 5 key equations in v1")
-        return value
+        # Multi-agent math agent may return up to 8 equations; trim to 8 here.
+        # (Previously raised at 5 — but raising broke the whole peel.)
+        return value[:8]
 
 
 class UserUsage(BaseModel):

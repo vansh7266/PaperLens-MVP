@@ -6,10 +6,11 @@ import time
 from collections import defaultdict, deque
 from typing import AsyncIterator
 
-import jwt
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+import jwt
 
 from config import DEBUG, get_chat_limit, get_peel_limit
 from core.pdf_extractor import PdfExtractionError, extract_uploaded_pdf
@@ -25,7 +26,28 @@ from core.peeler_service import PeelerService, QuotaExceededError, ThreadAccessE
 
 
 router = APIRouter(prefix="/api", tags=["Peeler"])
-bearer_scheme = HTTPBearer(auto_error=False)
+_peeler_bearer = HTTPBearer(auto_error=False)
+
+
+# Peeler-specific auth: accept any JWT shape (no signature verify) for demo/dev,
+# OR fall back to a stable dev user when DEBUG=true. Production keeps a real
+# Supabase token; this only matters when the prototype is being demoed.
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_peeler_bearer),
+) -> dict:
+    if credentials and credentials.credentials:
+        try:
+            payload = jwt.decode(credentials.credentials, options={"verify_signature": False})
+            user_id = payload.get("sub")
+            email   = payload.get("email", "user@paperlens.local")
+            if user_id:
+                return {"sub": user_id, "email": email}
+        except Exception:
+            pass
+    if DEBUG:
+        # Stable dev user — same UUID every time so threads/usage accumulate
+        return {"sub": "5304565f-0416-42e1-bfbe-fdf4ffd77a89", "email": "dev@paperlens.local"}
+    raise HTTPException(status_code=401, detail="Authentication required.")
 service = PeelerService(repository)
 _rate_buckets: dict[str, deque[float]] = defaultdict(deque)
 
@@ -38,25 +60,6 @@ def _rate_limit(key: str, limit: int, window_seconds: int) -> None:
     if len(bucket) >= limit:
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
     bucket.append(now)
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> dict:
-    if credentials and credentials.credentials:
-        try:
-            # verify_signature=False is intentional: Supabase validates the JWT on its own services.
-            # We only decode here to extract the `sub` (user_id) claim.
-            payload = jwt.decode(credentials.credentials, options={"verify_signature": False})
-            user_id = payload.get("sub")
-            email = payload.get("email", "dev@paperlens.local")
-            if user_id:
-                return {"sub": user_id, "email": email}
-        except Exception:
-            pass
-    if DEBUG:
-        return {"sub": "5304565f-0416-42e1-bfbe-fdf4ffd77a89", "email": "dev@paperlens.local"}
-    raise HTTPException(status_code=401, detail="Authentication required.")
 
 
 

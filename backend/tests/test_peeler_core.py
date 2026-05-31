@@ -92,11 +92,13 @@ def test_peel_output_requires_all_six_sections():
         "verdict",
     }
 
+    # Missing sections are auto-filled with a placeholder (graceful production behaviour).
+    # The validator adds them rather than raising, so the result is always a valid 6-section output.
     bad_payload = peel.model_dump()
     bad_payload["sections"].pop("timeline")
-
-    with pytest.raises(ValueError):
-        PeelOutput.model_validate(bad_payload)
+    filled = PeelOutput.model_validate(bad_payload)
+    assert "timeline" in filled.sections
+    assert filled.sections["timeline"].body == "Not extracted."
 
 
 @pytest.mark.asyncio

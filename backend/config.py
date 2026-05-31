@@ -43,20 +43,31 @@ PEELER_STORAGE       = os.getenv("PEELER_STORAGE", "memory")  # memory or supaba
 ACTIVE_LLM = os.getenv("ACTIVE_LLM", "openai")
 
 # Exact model strings per provider
+# Multi-agent Peeler uses different models per agent:
+#   walkthrough (writing-heavy) → fast/cheap model
+#   architecture + math (reasoning-heavy) → strong model
 MODELS = {
-    "openai": os.getenv("OPENAI_PEEL_MODEL", "gpt-5-mini"),
-    "openai_cheap": os.getenv("OPENAI_CHEAP_MODEL", "gpt-5-nano"),
+    # OpenAI — walkthrough agent (cheap, fluent writing)
+    "openai": os.getenv("OPENAI_PEEL_MODEL", "gpt-4o-mini"),
+    "openai_cheap": os.getenv("OPENAI_CHEAP_MODEL", "gpt-4o-mini"),
+    # OpenAI — architecture + math agents (strong reasoning)
+    "openai_strong": os.getenv("OPENAI_STRONG_MODEL", "gpt-4o"),
     "embedding": os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
     "gemini": "gemini-2.0-flash",
     "claude": "claude-sonnet-4-6",
+    # Groq fallback — fast model for walkthrough
     "groq": os.getenv("GROQ_PEEL_MODEL", "llama-3.1-8b-instant"),
+    # Groq fallback — strong model for architecture + math
+    "groq_strong": os.getenv("GROQ_STRONG_MODEL", "llama-3.3-70b-versatile"),
 }
 
 # API Keys
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")   # empty for now
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENAI_API_KEY      = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY      = os.getenv("GEMINI_API_KEY")
+CLAUDE_API_KEY      = os.getenv("CLAUDE_API_KEY", "")
+GROQ_API_KEY        = os.getenv("GROQ_API_KEY")
+CEREBRAS_API_KEY    = os.getenv("CEREBRAS_API_KEY")
+OPENROUTER_API_KEY  = os.getenv("OPENROUTER_API_KEY")
 
 
 # ============================================================
@@ -124,18 +135,38 @@ FREE_TOP_PAPERS = 20
 
 
 # ============================================================
-# PLAN LIMITS
+# PLAN LIMITS — LOCKED (do not change without Vansh's approval)
 # ============================================================
-# -1 means unlimited (Pro/Team plans)
-# These are enforced in the API routes
+# Trial (7 days, no card required):
+#   8 new uncached peels + 80 chat replies
+#   Full Research Radar access
+#   Cached peels = 0 credits for EVERYONE
+#   Failed peels = 0 credits for EVERYONE
+#
+# Free (after trial expires):
+#   5 new uncached peels / month + 50 chats / month
+#   Limited Research Radar access
+#
+# Pro (₹999/month):
+#   40 new uncached peels / month + 400 chats / month
+#   Full Research Radar access + priority peeling
 
-FREE_PEEL_LIMIT  = int(os.getenv("FREE_PEEL_LIMIT", "3"))      # beta new uncached peels / 7 days
-PRO_PEEL_LIMIT   = int(os.getenv("PRO_PEEL_LIMIT", "30"))      # Pro Starter new uncached peels / month
+TRIAL_DURATION_DAYS = int(os.getenv("TRIAL_DURATION_DAYS", "7"))
+TRIAL_PEEL_LIMIT    = int(os.getenv("TRIAL_PEEL_LIMIT", "8"))
+TRIAL_CHAT_LIMIT    = int(os.getenv("TRIAL_CHAT_LIMIT", "80"))
 
-FREE_CHAT_LIMIT  = int(os.getenv("FREE_CHAT_LIMIT", "20"))     # beta paper-chat replies / 7 days
-PRO_CHAT_LIMIT   = int(os.getenv("PRO_CHAT_LIMIT", "300"))     # Pro Starter replies / month
+FREE_PEEL_LIMIT     = int(os.getenv("FREE_PEEL_LIMIT", "5"))    # per month
+FREE_CHAT_LIMIT     = int(os.getenv("FREE_CHAT_LIMIT", "50"))   # per month
 
-FREE_SAVED_LIMIT = 20    # saved papers
+PRO_PEEL_LIMIT      = int(os.getenv("PRO_PEEL_LIMIT", "40"))   # per month
+PRO_CHAT_LIMIT      = int(os.getenv("PRO_CHAT_LIMIT", "400"))  # per month
+PRO_PRICE_INR       = 999
+
+# Chat input character limits — prevent cost abuse
+FREE_CHAT_INPUT_CHARS = int(os.getenv("FREE_CHAT_INPUT_CHARS", "500"))
+PRO_CHAT_INPUT_CHARS  = int(os.getenv("PRO_CHAT_INPUT_CHARS", "2000"))
+
+FREE_SAVED_LIMIT = 20    # saved items (Radar)
 PRO_SAVED_LIMIT  = -1    # unlimited
 
 
@@ -341,6 +372,65 @@ def validate_config() -> list:
         required["OPENAI_API_KEY_or_GROQ_API_KEY"] = None
     missing = [name for name, value in required.items() if not value]
     return missing
+
+
+# ============================================================
+# RESEARCH RADAR SETTINGS
+# ============================================================
+
+# Email — Resend API key (for OTP + daily digest)
+RESEND_API_KEY         = os.getenv("RESEND_API_KEY")
+RESEND_FROM_EMAIL      = os.getenv("RESEND_FROM_EMAIL", "radar@paperlens.app")
+
+# OTP settings
+OTP_EXPIRY_MINUTES     = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
+OTP_MAX_ATTEMPTS       = int(os.getenv("OTP_MAX_ATTEMPTS", "3"))
+OTP_RESEND_COOLDOWN_S  = int(os.getenv("OTP_RESEND_COOLDOWN_S", "60"))
+
+# HuggingFace model quality filters (skip low-signal models)
+HF_MIN_LIKES           = int(os.getenv("HF_MIN_LIKES", "3"))
+HF_MIN_DOWNLOADS       = int(os.getenv("HF_MIN_DOWNLOADS", "50"))
+HF_RELEVANT_PIPELINE_TAGS = [
+    "text-generation", "text2text-generation", "image-to-text",
+    "visual-question-answering", "image-classification", "object-detection",
+    "image-segmentation", "text-classification", "token-classification",
+    "question-answering", "summarization", "translation",
+    "automatic-speech-recognition", "text-to-speech",
+    "image-to-image", "text-to-image", "video-classification",
+    "reinforcement-learning", "robotics", "mask-generation",
+    "depth-estimation", "sentence-similarity", "feature-extraction",
+]
+
+# Radar pipeline scheduler
+RADAR_SCHEDULER_INTERVAL_MINUTES = int(os.getenv("RADAR_SCHEDULER_INTERVAL_MINUTES", "30"))
+RADAR_FREE_RELEASE_HOUR_UTC       = int(os.getenv("RADAR_FREE_RELEASE_HOUR_UTC", "4"))
+RADAR_FREE_DAILY_LIMIT            = int(os.getenv("RADAR_FREE_DAILY_LIMIT", "20"))
+
+# Radar LLM — OpenAI primary (production), Groq fallback / testing
+# Groq is current testing provider (free tier, fast).
+# Set RADAR_LLM=openai in .env when ready for production.
+# Provider chain: cerebras → openrouter → groq → openai → local stub
+RADAR_LLM               = os.getenv("RADAR_LLM", "cerebras")
+RADAR_OPENAI_MODEL      = os.getenv("RADAR_OPENAI_MODEL", "gpt-5-nano")
+RADAR_GROQ_MODEL        = os.getenv("RADAR_GROQ_MODEL", "llama-3.1-8b-instant")
+RADAR_CEREBRAS_MODEL    = os.getenv("RADAR_CEREBRAS_MODEL", "llama3.1-8b")
+RADAR_OPENROUTER_MODEL  = os.getenv("RADAR_OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
+RADAR_MAX_TOKENS                = int(os.getenv("RADAR_MAX_TOKENS", "300"))    # summary + why_it_matters
+RADAR_MAX_CONCURRENT_SUMMARIES = int(os.getenv("RADAR_MAX_CONCURRENT_SUMMARIES", "5"))
+RADAR_MAX_CONTENT_CHARS        = int(os.getenv("RADAR_MAX_CONTENT_CHARS", "2000"))
+
+# Today's Brief — diversity caps
+BRIEF_MAX_PAPERS          = int(os.getenv("BRIEF_MAX_PAPERS", "4"))
+BRIEF_MAX_MODELS          = int(os.getenv("BRIEF_MAX_MODELS", "3"))
+BRIEF_MAX_COMPANY_UPDATES = int(os.getenv("BRIEF_MAX_COMPANY_UPDATES", "3"))
+BRIEF_MAX_PER_TOPIC       = int(os.getenv("BRIEF_MAX_PER_TOPIC", "4"))
+BRIEF_MAX_PER_SOURCE      = int(os.getenv("BRIEF_MAX_PER_SOURCE", "2"))
+
+# Attention score thresholds for signal_label
+SIGNAL_HIGH_THRESHOLD       = float(os.getenv("SIGNAL_HIGH_THRESHOLD", "75"))
+SIGNAL_PEEL_THRESHOLD       = float(os.getenv("SIGNAL_PEEL_THRESHOLD", "60"))
+SIGNAL_WATCHING_THRESHOLD   = float(os.getenv("SIGNAL_WATCHING_THRESHOLD", "45"))
+# Below SIGNAL_WATCHING_THRESHOLD → "Quick Skim"
 
 
 # ============================================================
