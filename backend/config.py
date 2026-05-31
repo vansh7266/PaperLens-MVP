@@ -380,7 +380,7 @@ def validate_config() -> list:
 
 # Email — Resend API key (for OTP + daily digest)
 RESEND_API_KEY         = os.getenv("RESEND_API_KEY")
-RESEND_FROM_EMAIL      = os.getenv("RESEND_FROM_EMAIL", "radar@paperlens.app")
+RESEND_FROM_EMAIL      = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
 
 # OTP settings
 OTP_EXPIRY_MINUTES     = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
