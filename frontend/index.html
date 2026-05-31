@@ -429,64 +429,10 @@ async function initHeroBg(){
       color: 0xa8c4f0,
       size: 1.2,
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.38,
       sizeAttenuation: false
     }));
     root.add(particles);
-
-    // PREMIUM 3D NEURAL CONSTELLATION NETWORK
-    // NOTE: Set to false if you wish to run only the background particle star field.
-    const ENABLE_CONSTELLATION = true;
-    
-    let nodes = [];
-    let nodeGeo, nodePositions, nodePoints, constellationLines, lineGeo, linePos, lineCol;
-    const NC = 48;
-    const maxConnections = 120;
-
-    if(ENABLE_CONSTELLATION) {
-      nodeGeo = new THREE.BufferGeometry();
-      nodePositions = new Float32Array(NC * 3);
-      for (let i = 0; i < NC; i++) {
-        const x = (Math.random() - 0.5) * 15;
-        const y = (Math.random() - 0.5) * 10;
-        const z = (Math.random() - 0.5) * 12;
-        nodes.push({
-          x, y, z,
-          vx: (Math.random() - 0.5) * 0.014,
-          vy: (Math.random() - 0.5) * 0.014,
-          vz: (Math.random() - 0.5) * 0.014
-        });
-        nodePositions[i * 3] = x;
-        nodePositions[i * 3 + 1] = y;
-        nodePositions[i * 3 + 2] = z;
-      }
-      nodeGeo.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
-      
-      const nodeMat = new THREE.PointsMaterial({
-        color: 0xa8c4f0,
-        size: 3.5,
-        transparent: true,
-        opacity: 0.65,
-        sizeAttenuation: true
-      });
-      nodePoints = new THREE.Points(nodeGeo, nodeMat);
-      root.add(nodePoints);
-
-      // Create lines
-      lineGeo = new THREE.BufferGeometry();
-      linePos = new Float32Array(maxConnections * 2 * 3);
-      lineCol = new Float32Array(maxConnections * 2 * 3);
-      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-      lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 3));
-      
-      const lineMat = new THREE.LineBasicMaterial({
-        transparent: true,
-        opacity: 0.3,
-        vertexColors: true
-      });
-      constellationLines = new THREE.LineSegments(lineGeo, lineMat);
-      root.add(constellationLines);
-    }
 
     function onResize(){
       const w = W(), h = H();
@@ -502,82 +448,6 @@ async function initHeroBg(){
       
       // Rotate background particles
       particles.rotation.y = -t * 0.018;
-
-      if(ENABLE_CONSTELLATION) {
-        let lineIndex = 0;
-        const posArray = lineGeo.attributes.position.array;
-        const colArray = lineGeo.attributes.color.array;
-
-        // Move nodes
-        for (let i = 0; i < NC; i++) {
-          const node = nodes[i];
-          node.x += node.vx;
-          node.y += node.vy;
-          node.z += node.vz;
-          
-          // Bounce off boundary walls
-          if (Math.abs(node.x) > 9.5) node.vx *= -1;
-          if (Math.abs(node.y) > 7.5) node.vy *= -1;
-          if (Math.abs(node.z) > 8.5) node.vz *= -1;
-          
-          nodePositions[i * 3] = node.x;
-          nodePositions[i * 3 + 1] = node.y;
-          nodePositions[i * 3 + 2] = node.z;
-        }
-        nodeGeo.attributes.position.needsUpdate = true;
-
-        // Compute distances and create faints connections
-        const maxDist = 4.2;
-        for (let i = 0; i < NC; i++) {
-          for (let j = i + 1; j < NC; j++) {
-            if (lineIndex >= maxConnections) break;
-            const n1 = nodes[i];
-            const n2 = nodes[j];
-            const dx = n1.x - n2.x;
-            const dy = n1.y - n2.y;
-            const dz = n1.z - n2.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            
-            if (dist < maxDist) {
-              const idx = lineIndex * 6;
-              // Vert 1
-              posArray[idx] = n1.x;
-              posArray[idx + 1] = n1.y;
-              posArray[idx + 2] = n1.z;
-              // Vert 2
-              posArray[idx + 3] = n2.x;
-              posArray[idx + 4] = n2.y;
-              posArray[idx + 5] = n2.z;
-              
-              // Fade intensity by proximity
-              const alpha = 1.0 - (dist / maxDist);
-              // Base colors: R=0.66, G=0.77, B=0.94 (a8c4f0)
-              const r = 0.66 * alpha;
-              const g = 0.77 * alpha;
-              const b = 0.94 * alpha;
-              
-              colArray[idx] = r;
-              colArray[idx + 1] = g;
-              colArray[idx + 2] = b;
-              colArray[idx + 3] = r;
-              colArray[idx + 4] = g;
-              colArray[idx + 5] = b;
-              
-              lineIndex++;
-            }
-          }
-        }
-        
-        lineGeo.attributes.position.needsUpdate = true;
-        lineGeo.attributes.color.needsUpdate = true;
-        lineGeo.setDrawRange(0, lineIndex * 2);
-        
-        // Faint group rotations
-        nodePoints.rotation.y = t * 0.025;
-        nodePoints.rotation.x = Math.sin(t * 0.1) * 0.05;
-        constellationLines.rotation.y = t * 0.025;
-        constellationLines.rotation.x = Math.sin(t * 0.1) * 0.05;
-      }
 
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
