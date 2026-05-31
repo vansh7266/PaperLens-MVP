@@ -40,12 +40,12 @@ svg{display:block}
 .s-dot{transform-origin:13px 13px; transform:scale(0); animation:popS .5s cubic-bezier(0.175,0.885,0.32,1.275) .8s forwards}
 
 .splash-logo-b{font-size:45.71px; font-weight:700; letter-spacing:-1.14px; line-height:1; background:linear-gradient(135deg,var(--g1),var(--g3)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; opacity:0; transform:translateX(-15px); animation:slideS .8s cubic-bezier(0.4,0,0.2,1) 1s forwards}
-.splash-logo-l{font-size:45.71px; font-weight:300; letter-spacing:0; line-height:1; color:var(--muted); opacity:0; transform:translateX(-10px); animation:slideSLens .8s cubic-bezier(0.4,0,0.2,1) 1.2s forwards}
+.splash-logo-l{font-size:45.71px; font-weight:300; letter-spacing:10px; line-height:1; color:var(--muted); opacity:0; transform:translateX(-10px); animation:slideSLens .8s cubic-bezier(0.4,0,0.2,1) 1.2s forwards}
 
 @keyframes drawS{to{stroke-dashoffset:0}}
 @keyframes popS{to{transform:scale(1)}}
 @keyframes slideS{to{opacity:1; transform:translateX(0)}}
-@keyframes slideSLens{to{opacity:1; transform:translateX(0); letter-spacing:10px}}
+@keyframes slideSLens{to{opacity:1; transform:translateX(0)}}
 
 /* ══ NAV ══ */
 .nav{
@@ -166,7 +166,7 @@ svg{display:block}
     rgba(245,230,204,0.06) 100%
   );
   background-size: 200% 100%;
-  animation: pipelineFlow 3.5s linear infinite;
+  animation: pipelineFlow 6.8s linear infinite;
   z-index:0;
 }
 @keyframes pipelineFlow {
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isNaN(targetNum)) {
           // Reset start value to 0 and count up
           el.textContent = prefix + "0" + suffix;
-          animateValue(el, 0, targetNum, 1600, prefix, suffix);
+          animateValue(el, 0, targetNum, 2500, prefix, suffix);
         }
       }
     });
