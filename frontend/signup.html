@@ -156,8 +156,27 @@ svg{display:block}
 
       <div class="check-sent" id="check-sent">
         <div class="check-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-        <h3 style="margin-bottom:6px;font-size:15px">Check your email</h3>
-        <p style="font-size:13px;color:var(--muted)">We sent a confirmation link to <strong id="verify-email" style="color:var(--text)"></strong></p>
+        <h3 style="margin-bottom:6px;font-size:15.5px">Verify your email</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px">We sent a 6-digit verification code to <strong id="verify-email" style="color:var(--text)"></strong></p>
+        
+        <form id="otp-form" onsubmit="event.preventDefault(); doVerifyOtp()">
+          <div class="field" style="margin-bottom:15px">
+            <label class="flabel">Verification Code</label>
+            <input class="finput" type="text" id="otp-code" placeholder="123456" pattern="\d{6}" maxlength="6" required style="letter-spacing:4px;text-align:center;font-size:16px;font-weight:600" autocomplete="one-time-code"/>
+          </div>
+          <button class="btn-submit" id="otp-btn" type="submit">
+            <span id="otp-btn-txt">Verify Code</span>
+            <div class="spinner" id="otp-spinner" style="border-top-color:#0a0a0c;width:16px;height:16px;border:2px solid rgba(0,0,0,0.18);border-radius:50%;animation:spin .7s linear infinite;display:none"></div>
+          </button>
+        </form>
+        
+        <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--muted)">
+          Didn't get the code? <button type="button" id="resend-btn" onclick="resendOtp()" style="color:var(--g1);font-weight:550;text-decoration:underline">Resend</button>
+          <span id="resend-timer" style="display:none;color:var(--faint)">in 30s</span>
+        </div>
+        <div style="margin-top:12px;text-align:center;font-size:12px">
+          <button type="button" onclick="goBackToSignup()" style="color:var(--faint);text-decoration:underline">Go back & edit email</button>
+        </div>
       </div>
 
       <div class="demo-divider"><div class="div-line"></div><span class="div-txt">or explore instantly</span><div class="div-line"></div></div>
@@ -217,6 +236,92 @@ async function doSignup(){
       setLoading(false);
     }
   }catch(e){showErr('Sign up failed');setLoading(false)}
+}
+
+function goBackToSignup(){
+  $('#signup-form').style.display = 'block';
+  $('#check-sent').style.display = 'none';
+  clearAlerts();
+}
+
+async function doVerifyOtp(){
+  clearAlerts();
+  const em = $('#email').value.trim();
+  const code = $('#otp-code').value.trim();
+  if(!code || code.length !== 6){showErr('Please enter a valid 6-digit code');return}
+  if(!sb){showErr('Authentication service not available');return}
+  
+  // Set loading
+  $('#otp-btn').disabled = true;
+  $('#otp-btn-txt').style.display = 'none';
+  $('#otp-spinner').style.display = 'inline-block';
+  
+  try {
+    const { data, error } = await sb.auth.verifyOtp({
+      email: em,
+      token: code,
+      type: 'signup'
+    });
+    if(error){
+      showErr(error.message);
+      $('#otp-btn').disabled = false;
+      $('#otp-btn-txt').style.display = 'inline';
+      $('#otp-spinner').style.display = 'none';
+      return;
+    }
+    showOk('Email verified! Redirecting...');
+    setTimeout(()=>window.location.href='dashboard.html',600);
+  } catch(e) {
+    showErr('Verification failed');
+    $('#otp-btn').disabled = false;
+    $('#otp-btn-txt').style.display = 'inline';
+    $('#otp-spinner').style.display = 'none';
+  }
+}
+
+async function resendOtp(){
+  clearAlerts();
+  const em = $('#email').value.trim();
+  if(!sb){showErr('Authentication service not available');return}
+  
+  // Disable resend button
+  $('#resend-btn').style.pointerEvents = 'none';
+  $('#resend-btn').style.opacity = '0.5';
+  
+  try {
+    const { error } = await sb.auth.resend({
+      type: 'signup',
+      email: em,
+      options: { emailRedirectTo: window.location.origin+'/dashboard.html' }
+    });
+    if(error){
+      showErr(error.message);
+      $('#resend-btn').style.pointerEvents = 'auto';
+      $('#resend-btn').style.opacity = '1';
+      return;
+    }
+    showOk('A new code has been sent!');
+    
+    // Start timer
+    let count = 30;
+    $('#resend-timer').style.display = 'inline';
+    $('#resend-timer').textContent = `in ${count}s`;
+    const interval = setInterval(() => {
+      count--;
+      if (count <= 0) {
+        clearInterval(interval);
+        $('#resend-timer').style.display = 'none';
+        $('#resend-btn').style.pointerEvents = 'auto';
+        $('#resend-btn').style.opacity = '1';
+      } else {
+        $('#resend-timer').textContent = `in ${count}s`;
+      }
+    }, 1000);
+  } catch(e){
+    showErr('Resend failed');
+    $('#resend-btn').style.pointerEvents = 'auto';
+    $('#resend-btn').style.opacity = '1';
+  }
 }
 
 async function googleSignUp(){
