@@ -52,8 +52,10 @@ body::before{content:''; position:fixed; inset:0; pointer-events:none; z-index:0
 .user-plan{font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* MAIN */
-.main{margin-left:calc(var(--sidebar-w) + 24px); position:relative; z-index:2; padding:36px 48px 60px; max-width:920px; opacity:0; animation:fadeUp .55s .2s ease both}
+.main{margin-left:calc(var(--sidebar-w) + 24px); position:relative; z-index:2; padding:36px 48px 60px; max-width:920px; transition:margin-left var(--tf); opacity:0; animation:fadeUp .55s .2s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.sidebar.closed ~ .main{margin-left:0}
+.sidebar.closed ~ .main .hamburger{display:flex !important}
 @media (max-width:900px){.sidebar{transform:translateX(calc(-100% - 30px))} .sidebar.open{transform:translateX(0)} .main{margin-left:0; padding:24px 22px} .hamburger{display:flex !important}}
 
 .topbar{display:flex; align-items:center; gap:14px; margin-bottom:30px}
@@ -296,7 +298,20 @@ try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(
 let authToken = null;
 const $ = q => document.querySelector(q);
 
-function toggleSidebar(){ $('#sidebar').classList.toggle(window.innerWidth <= 900 ? 'open' : 'closed'); }
+// Restore sidebar state
+if (localStorage.getItem('pl_sb') === 'closed') {
+  try { document.querySelector('#sidebar').classList.add('closed'); } catch(e) {}
+}
+
+function toggleSidebar(){
+  const s = $('#sidebar');
+  if(window.innerWidth <= 900) {
+    s.classList.toggle('open');
+  } else {
+    const isClosed = s.classList.toggle('closed');
+    localStorage.setItem('pl_sb', isClosed ? 'closed' : 'open');
+  }
+}
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._tm); t._tm = setTimeout(()=> t.style.display = 'none', 2500); }
 function showAlert(kind, msg){
   const el = $('#email-alert'); el.className = 'alert alert-'+kind; el.textContent = msg;

@@ -102,6 +102,7 @@ a{color:inherit; text-decoration:none}
   transition:margin-left var(--tf);
 }
 .sidebar.closed ~ .main{margin-left:0}
+.sidebar.closed ~ .main .hamburger{display:flex !important}
 
 .topbar{display:flex; align-items:center; gap:14px; margin-bottom:30px; opacity:0; animation:fadeUp .55s .1s ease both}
 .hamburger{width:34px; height:34px; border-radius:9px; display:none; align-items:center; justify-content:center; border:1px solid var(--border); background:rgba(17,17,20,0.6); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); transition:all var(--tf)}
@@ -371,10 +372,20 @@ try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(
 let authToken = null;
 const $ = q => document.querySelector(q);
 function goTo(url){ window.location.href = url; }
+
+// Restore sidebar state
+if (localStorage.getItem('pl_sb') === 'closed') {
+  try { document.querySelector('#sidebar').classList.add('closed'); } catch(e) {}
+}
+
 function toggleSidebar(){
   const s = $('#sidebar');
-  if(window.innerWidth <= 900) s.classList.toggle('open');
-  else s.classList.toggle('closed');
+  if(window.innerWidth <= 900) {
+    s.classList.toggle('open');
+  } else {
+    const isClosed = s.classList.toggle('closed');
+    localStorage.setItem('pl_sb', isClosed ? 'closed' : 'open');
+  }
 }
 
 async function initAuth(){

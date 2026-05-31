@@ -573,15 +573,25 @@
   <div id="toast" hidden role="alert" aria-live="assertive"></div>
 
 <script>
+// Restore sidebar state
+if (localStorage.getItem('pl_sb') === 'closed') {
+  try {
+    document.getElementById('sidebar').classList.add('closed');
+    document.getElementById('main').classList.add('wide');
+  } catch(e) {}
+}
+
 // Sidebar toggle
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const mn = document.getElementById('main');
   const overlay = document.getElementById('mob-overlay');
-  sb.classList.toggle('closed');
-  mn.classList.toggle('wide');
+  const isClosed = sb.classList.toggle('closed');
+  mn.classList.toggle('wide', isClosed);
   if (window.innerWidth <= 768) {
-    overlay.classList.toggle('show', !sb.classList.contains('closed'));
+    overlay.classList.toggle('show', !isClosed);
+  } else {
+    localStorage.setItem('pl_sb', isClosed ? 'closed' : 'open');
   }
 }
 document.getElementById('sb-toggle').addEventListener('click', toggleSidebar);
