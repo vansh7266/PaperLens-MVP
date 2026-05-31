@@ -1,196 +1,232 @@
-# 🔬 PaperLens
+# PaperLens
 
-### **Research Intelligence Workspace — Open a paper. Watch it turn into context.**
+### Track the field. Understand any paper. Every paper, peeled.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Hackathon](https://img.shields.io/badge/AI--Builders-Hackathon%20MVP-orange)](https://github.com/vansh7266/PaperLens-MVP)
-[![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.135%2B-green.svg)](https://fastapi.tiangolo.com/)
+[![Status](https://img.shields.io/badge/Status-MVP%20%2F%20Prototype-yellow)](https://github.com/vansh7266/PaperLens-MVP)
 
 ---
 
-PaperLens is a high-performance **Research Intelligence Platform** designed to solve a major problem for AI researchers and builders: the cognitive overload of reading and tracking modern research papers. 
+PaperLens is an AI research intelligence platform that solves two problems at once: **tracking the AI field in real time** and **deeply understanding any paper you find** — in one unified workflow.
 
-Instead of reading static, dense PDFs, PaperLens transforms any research paper (via arXiv ID, URL, DOI, or raw PDF upload) into an **interactive, structured 5-stage deep learning experience**, coupled with a **real-time Research Radar** that automatically aggregates, filters, and summarizes daily publications in your areas of interest.
+There are tools that track research. There are tools that summarize papers. Nobody has combined both into a single intelligent platform — until PaperLens.
 
-> [!NOTE]  
-> Built for the **AI Builders Hackathon (Phase 1 MVP)** by **Vansh Gupta** (BTech 2nd Year, IIIT Bhopal) in pair-programming partnership with **Antigravity** (Google DeepMind).
+> **Built for the AI Builders Hackathon** by Vansh Gupta (BTech 2nd Year, IIIT Bhopal), pair-programmed with Claude (Anthropic) using an AI-assisted Codex workflow.
+
+> **Honest status:** This is a working MVP. The core loop — Radar + multi-agent Peeler + caching + community ratings — is fully functional with real data. Full Version 1 ships in a few weeks with OpenAI production backend, Pro plan, and payment integration.
 
 ---
 
-## 🧭 System Architecture Overview
+## What PaperLens Does
+
+### Research Radar — Track the field in real time
+Live feed of every new AI/ML paper, model release, and lab announcement. Scraped from arXiv (5 categories), HuggingFace, and RSS feeds from OpenAI, DeepMind, Anthropic, Meta AI, and Mistral — refreshing every 30 minutes. Over 1,100 real items already in the database.
+
+Every item passes through an intelligence pipeline: topic classification, difficulty rating, attention scoring, and a signal label (High Signal / Worth Peeling / Community Pick / Trending). The feed re-ranks automatically by blending algorithmic scores with live community ratings.
+
+### Paper Peeler — Multi-agent deep analysis
+Paste an arXiv URL, DOI, title, or upload a PDF. Three specialized agents run in parallel:
+
+- **Walkthrough Agent** — Plain-language teaching of the full paper: the problem, prior work, what was proposed, why it works, the results, and a verdict.
+- **Architecture Agent** — Extracts the actual model architecture from the paper's own text and renders it as a live, animated, step-through diagram. Each node can be peeled open to reveal internal sub-components. Unique to PaperLens.
+- **Math Agent** — Every method-defining equation, with each symbol explained, what it computes, and what breaks if you change it.
+
+After the peel: a **grounded chat** interface, where every answer is grounded in the actual paper content with full conversation history.
+
+---
+
+## Key Design Decisions
+
+**Global peel caching** — Peels are cached globally in the database. The first user to peel a paper pays the API cost. Every user after that gets it instantly: zero credits, zero API calls. Message shown: *"Served from cache — 0 credits used."* The platform gets cheaper and faster as it scales.
+
+**Community ratings flywheel** — Every card has a 5-star global rating. All users see the same aggregate score. The feed blends algorithmic attention scores with community ratings. More users = better signal for everyone. It compounds.
+
+**Provider-agnostic LLM system** — The multi-agent system reads available API keys at runtime and auto-selects. Currently running Groq (Llama 3.1 8B for Walkthrough, Llama 3.3 70B for Architecture + Math). Adding one OpenAI key upgrades everything to GPT-4o automatically — all three agents in parallel. No code change. Cerebras and OpenRouter wired as fallbacks.
+
+**Smart scheduling** — arXiv only publishes weekdays ~6 AM UTC. The scraper scheduler knows this and doesn't waste API calls on weekends.
+
+**Demo mode** — One-click access on the login page, no signup required. Loads a pre-analyzed copy of *Attention Is All You Need* so anyone can see the full system immediately.
+
+**Transparency notices** — Yellow notice strips appear throughout the app wherever a feature is still in progress (AI summaries, daily brief). Honest markers, not excuses.
+
+---
+
+## Architecture
 
 ```
-                      +------------------------------------------+
-                      |               USER FRONTEND              |
-                      |   (HTML5, Vanilla JS, KaTeX, Supabase)   |
-                      +--------------------+---------------------+
-                                           |
-                                           | HTTP Requests & SSE Streams
-                                           v
-                      +--------------------+---------------------+
-                      |             FASTAPI BACKEND              |
-                      +------+-------------+--------------+------+
-                             |             |              |
-           Scraper Scheduler |             | Supabase     | LLM APIs
-                             v             v              v
-+------------------------------+     +-------------+    +---------------+
-|        RESEARCH RADAR        |     |  POSTGRES   |    |  OPENAI GPT / |
-|   (arXiv, HF, RSS scrapers)  |     |  & AUTH DB  |    |  GROQ LLAMA 3 |
-+------------------------------+     +-------------+    +---------------+
+                    +------------------------------------------+
+                    |              USER FRONTEND               |
+                    |  Vanilla JS · CSS · Three.js · KaTeX     |
+                    |  Deployed: Netlify                        |
+                    +--------------------+---------------------+
+                                         |
+                                         | HTTP / SSE Streams
+                                         v
+                    +--------------------+---------------------+
+                    |            FASTAPI BACKEND               |
+                    |            Deployed: Render              |
+                    +------+-------------+--------------+------+
+                           |             |              |
+         Radar Scheduler   |    Supabase |              | LLM APIs
+                           v             v              v
+              +-------------------+  +---------+  +-------------------+
+              |   RESEARCH RADAR  |  | POSTGRES|  |  MULTI-AGENT      |
+              | arXiv · HF · RSS  |  |  + AUTH |  |  PEELER SYSTEM    |
+              +-------------------+  +---------+  | Groq / OpenAI /   |
+                                                   | Cerebras /        |
+                                                   | OpenRouter        |
+                                                   +-------------------+
 ```
 
 ---
 
-## ⚡ Core Pillars & Key Features
+## Technology Stack
 
-### 1. 🔬 The Paper Peeler (Deep-Dive Analysis)
-Deconstructs complex research papers into five bite-sized, interactive pillars:
-* **Stage 1: Structured Walkthrough** — Streams 13 sequential learning chapters (Introduction, Core Concept, Methods, Results, Limitations, etc.) with automated confidence/evidence check badges (`High` or `Medium`).
-* **Stage 2: SVG Network Architecture Blueprint** — Renders an interactive, programmatically-generated SVG block diagram of the model. Users can click any block to "peel it open" and reveal internal sub-blueprints (e.g., standard Transformer block -> self-attention + MLP).
-* **Stage 3: Math Peel** — Automatically extracts key formulas, formats them beautifully using KaTeX, and displays a step-by-step breakdown of every symbol's name, role in the architecture, and theoretical behavior if changed.
-* **Stage 4: Grounded Chat** — A fully vector-grounded Q&A chatbot that answers questions using direct citations from the paper's own text.
-* **Smart DB Caching** — Every paper is peeled once and cached forever in the PostgreSQL database. Subsequent loads for any user globally are instant and consume zero API credits.
+### Backend
+| Component | Technology |
+|---|---|
+| API Framework | FastAPI (Python 3.12), async + SSE streaming |
+| Database | Supabase (PostgreSQL) — peels, ratings, radar feed, auth |
+| PDF Extraction | PyMuPDF + PyMuPDF4LLM |
+| LLM Providers | Groq (primary), OpenAI, Cerebras, OpenRouter (fallbacks) |
+| Scheduler | APScheduler — async background scraper jobs |
+| Scrapers | arXiv API, HuggingFace daily papers, RSS (OpenAI / DeepMind / Anthropic / Meta / Mistral) |
 
-### 2. 📡 The Research Radar (Smart Aggregation Feed)
-A comprehensive daily feed that acts as a custom newsletter for AI research:
-* **Automated Scrapers** — Periodic background scheduler scraping new papers from arXiv, Hugging Face, and top AI blog feeds.
-* **Signal Labeling** — Intelligent LLM labeling categorizing papers into high-impact tags: `High Signal`, `Worth Peeling`, `Worth Watching`, or `Quick Skim`.
-* **Personalized Topics** — Customize your dashboard feed by selecting topics like *Deep Learning Architecture*, *NLP*, *Computer Vision*, *LLM Agents*, and *Optimization*.
-* **Dynamic Daily Email Digests** — Set up fully customized digest schedules (e.g., daily at 8:00 AM) sent straight to your email via a secure, passwordless OTP verification system.
-* **Saved Items & Star Ratings** — Rate papers on a 5-star scale to help rank trending content, and save critical papers to your personal reading list.
-
----
-
-## 🛠️ The Technology Stack
-
-### Backend Services
-* **FastAPI (Python 3.12)** — Fast, asynchronous routing and Server-Sent Events (SSE) streaming.
-* **Supabase & PostgreSQL** — Core database for caching peeled paper JSONs, storing scraped feeds, persistent user reading lists, ratings, and auth session tables.
-* **PyMuPDF & PyMuPDF4LLM** — For high-fidelity text extraction, page parsing, and Markdown cleaning of research paper PDFs.
-* **Groq API & OpenAI API** — Powering rapid fallback LLM inference (using Llama 3.3 70B & GPT-4o models).
-* **APScheduler** — Asynchronous scheduler driving the background Research Radar scrapers.
-
-### Frontend Interface
-* **Vanilla JavaScript (IIFE Pattern)** — Lightweight, standard-compliant scripting with no runtime framework overhead.
-* **Supabase Client JS SDK** — Client-side user onboarding, authentication, and secure session management.
-* **KaTeX** — Lightning-fast, serverless LaTeX math rendering.
-* **CSS Custom Properties (`@property`) & Vanilla CSS** — Premium, responsive dark-themed dashboard, sleek frosted glass layouts, and sweep ink-draw animations.
+### Frontend
+| Component | Technology |
+|---|---|
+| Scripting | Vanilla JavaScript (no framework) |
+| 3D Animations | Three.js (CDN) — globe splash, star field hero, lens shape |
+| Math Rendering | KaTeX |
+| Auth | Supabase JS SDK |
+| Styling | CSS custom properties, glassmorphism, CSS perspective grid |
+| Deployment | Netlify |
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 PaperLens/
 ├── backend/
-│   ├── main.py                     # FastAPI app entrypoint & lifespan managers
-│   ├── config.py                   # System configuration & environment validations
+│   ├── main.py                     # FastAPI entrypoint & lifespan
+│   ├── config.py                   # Environment config & validation
 │   ├── core/
-│   │   ├── peeler_service.py       # Manages the 5-stage paper analysis engine
-│   │   ├── peeler_llm.py           # Core prompts and structured outputs for Peeler
-│   │   ├── peeler_resolver.py      # Resolves arXiv IDs, DOIs, web URLs, & raw uploads
-│   │   ├── peeler_models.py        # Pydantic schemas for the Peeler endpoints
-│   │   ├── peeler_repository.py    # Supabase CRUD operations for Peeler cache
-│   │   └── pdf_extractor.py        # PDF-to-Markdown text extractor using PyMuPDF
-│   ├── radar/                      # Automated Content Radar module
-│   │   ├── core/
-│   │   │   └── database.py         # Async Supabase DB connections for Scrapers
+│   │   ├── peeler_service.py       # Multi-agent orchestration engine
+│   │   ├── peeler_llm.py           # Agent prompts & structured outputs
+│   │   ├── peeler_resolver.py      # Resolves arXiv IDs, DOIs, URLs, PDFs
+│   │   ├── peeler_models.py        # Pydantic schemas for Peeler
+│   │   ├── peeler_repository.py    # Supabase CRUD for peel cache
+│   │   └── pdf_extractor.py        # PDF → Markdown via PyMuPDF
+│   ├── radar/
 │   │   ├── pipeline/
-│   │   │   ├── scheduler.py        # Asynchronous background scraper scheduler
-│   │   │   ├── processor.py        # Feeds parser, deduplicator & analyzer
-│   │   │   └── summarizer.py       # Signal scoring, item difficulty, & key highlights
+│   │   │   ├── scheduler.py        # Background scraper scheduler
+│   │   │   ├── processor.py        # Feed parser, deduplicator, analyzer
+│   │   │   └── summarizer.py       # Signal scoring & difficulty tagging
 │   │   ├── scrapers/
-│   │   │   ├── base.py             # Scraper abstract class
-│   │   │   ├── arxiv.py            # Custom arXiv search & scraper
-│   │   │   ├── huggingface.py      # HuggingFace daily paper list fetcher
-│   │   │   └── rss_blogs.py        # OpenAI, Anthropic, & DeepMind RSS Scraper
+│   │   │   ├── arxiv.py            # arXiv scraper
+│   │   │   ├── huggingface.py      # HuggingFace daily papers
+│   │   │   └── rss_blogs.py        # Lab blog RSS feeds
 │   │   ├── routes/
-│   │   │   ├── radar.py            # Feeds, preferences & stats routes
-│   │   │   ├── email.py            # OTP generation, verification & daily digests
-│   │   │   ├── rating.py           # 5-star community ranking router
-│   │   │   └── saved.py            # Reading list bookmarking routes
-│   │   └── models.py               # Radar feed and digest Pydantic schemas
+│   │   │   ├── radar.py            # Feed & stats routes
+│   │   │   ├── rating.py           # Community 5-star rating
+│   │   │   └── saved.py            # Reading list bookmarks
+│   │   └── models.py               # Radar Pydantic schemas
 │   ├── routes/
-│   │   ├── auth.py                 # Supabase session handlers & auth helpers
-│   │   └── peeler.py               # Main paper parsing SSE streaming routes
+│   │   ├── auth.py                 # Supabase session handlers
+│   │   └── peeler.py               # SSE streaming routes
 │   ├── supabase/
-│   │   └── radar_schema.sql        # Supabase database SQL schema
-│   └── tests/                      # Automated PyTest suites for Peeler & Radar
+│   │   └── radar_schema.sql        # DB schema (tables, indexes, triggers)
+│   └── tests/
 ├── frontend/
-│   ├── index.html                  # Landing Page
-│   ├── login.html                  # Onboarding Authentication
+│   ├── index.html                  # Landing page (3D globe → star field)
+│   ├── login.html                  # Login + demo mode
 │   ├── signup.html                 # Registration
-│   ├── onboarding.html             # Profile creation & interest select
-│   ├── dashboard.html              # Main feed shell
-│   ├── peeler.html                 # Interactive 5-stage Paper Peeler
-│   ├── radar.html                  # Custom feeds, ratings, and reading list
-│   ├── settings.html               # Digest preferences, email OTP verification, & profile
+│   ├── dashboard.html              # Command center + stats
+│   ├── peeler.html                 # Multi-agent Paper Peeler
+│   ├── radar.html                  # Research Radar feed
+│   ├── settings.html               # Profile & preferences
 │   └── assets/peeler/
-│       ├── app.js                  # Peeler workspace state engine (~3000 lines)
-│       ├── api.js                  # Streams API client utilizing EventSource
-│       ├── config.js               # Environment URL and Supabase credentials
-│       └── peeler.css              # Premium responsive glassmorphic stylesheets
+│       ├── app.js                  # Peeler state engine
+│       ├── api.js                  # SSE streaming client
+│       ├── config.js               # Environment config
+│       └── peeler.css              # Glassmorphic styles
 └── README.md
 ```
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
-### Prerequisite DB Configuration
-Execute the queries in [radar_schema.sql](file:///Users/vanshgupta/Desktop/PaperLens/backend/supabase/radar_schema.sql) in your **Supabase SQL Editor** to establish the required tables, indexes, functions, and trigger security hooks for Paper Radar.
+### 1. Database
+Run [`backend/supabase/radar_schema.sql`](backend/supabase/radar_schema.sql) in your Supabase SQL Editor to create all required tables, indexes, and triggers.
 
-### 1. Run Backend Services
+### 2. Backend
 ```bash
 cd backend
-
-# Create and activate virtual environment
 python -m venv .venv
 source .venv/bin/activate
-
-# Install package dependencies
-pip install --upgrade pip
-pip install .
-
-# Copy environment template & configure secrets
+pip install --upgrade pip && pip install .
 cp .env.example .env
 ```
 
-Configure your `.env` keys:
+Configure `.env`:
 ```env
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 GROQ_API_KEY=your_groq_api_key
-OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_KEY=your_openai_api_key   # optional — auto-upgrades agents when present
 ```
 
-Start the asynchronous API & Scheduler:
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
----
-
-### 2. Run Frontend
-Serve the `frontend/` directory using any static file server. Since the API includes CORS headers matching local environments, you can run a simple server:
+### 3. Frontend
 ```bash
 cd frontend
 npx serve . -p 5173
 ```
-Now navigate to `http://localhost:5173` to explore the workspace!
+
+Open `http://localhost:5173`. Use **Try a Demo** on the login page to explore without an account.
 
 ---
 
-## 👥 Contributors
+## What's Working vs. What's Coming
 
-This MVP was created during pair-programming sessions by:
-
-* **Vansh Gupta** (Lead Developer) — *BTech 2nd Year, IIIT Bhopal*
-  * [![GitHub](https://img.shields.io/badge/GitHub-vansh7266-lightgrey?logo=github)](https://github.com/vansh7266)
-* **Antigravity** (AI Coding Companion) — *Designed by Google DeepMind*
-  * [![DeepMind](https://img.shields.io/badge/DeepMind-Google-blue)](https://deepmind.google/)
+| Feature | Status |
+|---|---|
+| Research Radar — live scraping (arXiv, HF, RSS) | Live |
+| Intelligence pipeline (classification, scoring, signal labels) | Live |
+| Community 5-star ratings (global, re-ranking) | Live |
+| Save to reading list | Live |
+| Smart weekend scheduling | Live |
+| Multi-agent Paper Peeler (3 parallel agents) | Live |
+| Global peel caching (0-credit repeat loads) | Live |
+| Architecture diagram (animated, step-through) | Live |
+| Math equation breakdown | Live |
+| Grounded chat | Live |
+| Demo mode (no signup) | Live |
+| AI summaries on Radar feed | V2 |
+| AI-written daily brief | V2 |
+| OpenAI production backend | V2 |
+| Pro plan + payment integration | V2 |
+| WhatsApp morning digest bot | V2 |
 
 ---
-*Developed for the AI Builders Hackathon. Open a paper, let us turn it into context.*
+
+## Contributors
+
+- **Vansh Gupta** — Lead Developer, BTech 2nd Year, IIIT Bhopal
+  [![GitHub](https://img.shields.io/badge/GitHub-vansh7266-lightgrey?logo=github)](https://github.com/vansh7266)
+
+- **Claude (Anthropic)** — AI pair-programming partner throughout the build
+  [![Anthropic](https://img.shields.io/badge/Anthropic-Claude-blueviolet)](https://anthropic.com)
+
+---
+
+*Built for the AI Builders Hackathon. Track the field. Understand any paper. Every paper, peeled.*
