@@ -308,16 +308,39 @@
 
   /* ─── Auth ─── */
   async function refreshAuthState() {
-    $("#authPill").textContent = "dev@paperlens.local (Developer Bypass)";
-    $("#authPill").onclick = () => { console.log("Auth bypassed for development testing."); };
+    try {
+      const sbClient = window.PaperLensAuth || (window.PaperLensAuth = (function(){
+        const cfg = window.PAPERLENS_CONFIG || {};
+        return (window.supabase && cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY)
+          ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
+          : null;
+      })());
 
-    // Set fallback user chip
-    const uname = $("#uname");
-    const uplan = $("#uplan");
-    const uav = $("#uav");
-    if (uname) uname.textContent = "Aryan Kumar";
-    if (uplan) uplan.textContent = "Pro plan";
-    if (uav) uav.textContent = "AK";
+      if (sbClient) {
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (session?.user) {
+          const user = session.user;
+          const meta = user.user_metadata || {};
+          const name = meta.name || meta.full_name || user.email?.split('@')[0] || 'User';
+          const plan = meta.plan || 'free';
+          const initial = name.charAt(0).toUpperCase();
+
+          const pill = $("#authPill");
+          if (pill) { pill.textContent = user.email; pill.onclick = null; }
+          const uname = $("#uname"); if (uname) uname.textContent = name;
+          const uplan = $("#uplan"); if (uplan) uplan.textContent = plan === 'pro' ? 'Pro plan' : 'Free plan';
+          const uav   = $("#uav");   if (uav)   uav.textContent   = initial;
+          return;
+        }
+      }
+    } catch(e) { /* fall through to guest */ }
+
+    // Not signed in
+    const pill = $("#authPill");
+    if (pill) { pill.textContent = "Sign in"; pill.onclick = () => window.location.href = "login.html"; }
+    const uname = $("#uname"); if (uname) uname.textContent = "Guest";
+    const uplan = $("#uplan"); if (uplan) uplan.textContent = "Free plan";
+    const uav   = $("#uav");   if (uav)   uav.textContent   = "G";
   }
 
   /* ─── Usage ─── */
@@ -1811,6 +1834,8 @@
     // Each window opens at the top
     const flow = document.getElementById("tutorFlow");
     if (flow) flow.scrollTop = 0;
+    // Also scroll the page itself to the top so architecture canvas is fully visible
+    window.scrollTo({ top: 0, behavior: "smooth" });
 
     // Expose the active stage to CSS so per-window chrome (e.g. result-hero)
     // can show/hide cleanly without JS coordination.
