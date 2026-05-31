@@ -31,6 +31,7 @@ svg{display:block}
 /* ══ SPLASH ══ */
 .splash-container{position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; pointer-events:none}
 .splash-bg{position:absolute; inset:0; background-color:var(--bg); z-index:0}
+#splashDotsCanvas{position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none}
 .splash-content{position:relative; z-index:1; display:flex; align-items:center; gap:28.57px; will-change:transform}
 .splash-text-wrap{display:flex; align-items:baseline; user-select:none; line-height:1}
 
@@ -229,6 +230,7 @@ svg{display:block}
 <!-- ── SPLASH OVERLAY ── -->
 <div id="splash-container" class="splash-container">
   <div id="splash-bg" class="splash-bg"></div>
+  <canvas id="splashDotsCanvas" aria-hidden="true"></canvas>
   <div id="splash-content" class="splash-content">
     <svg width="80" height="80" viewBox="0 0 28 28" fill="none">
       <circle class="s-out" cx="13" cy="13" r="9" stroke="url(#nlg2)" stroke-width="1.5"/>
@@ -385,6 +387,7 @@ function tryDemo(){
 
 /* ══ SPLASH HANDOFF (exact from paperlens-index.html DOCS) ══ */
 window.addEventListener('load', () => {
+  initSplashDots();
   const splashContainer = document.getElementById('splash-container');
   const splashBg = document.getElementById('splash-bg');
   const splashContent = document.getElementById('splash-content');
@@ -418,6 +421,58 @@ window.addEventListener('load', () => {
     setTimeout(initHeroBg, 200);
   }, 2600);
 });
+
+/* ══ SPLASH GLOBE — dot globe rotating during splash ══ */
+function initSplashDots(){
+  const canvas = document.getElementById('splashDotsCanvas');
+  if(!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  // Build globe dots along latitude rings
+  const dots = [];
+  const RINGS = 10;
+  for(let lat = 0; lat <= RINGS; lat++){
+    const phi = (lat / RINGS) * Math.PI;
+    const y = Math.cos(phi);
+    const r = Math.sin(phi);
+    const n = Math.max(1, Math.round(r * 28));
+    for(let d = 0; d < n; d++){
+      const theta = (d / n) * Math.PI * 2;
+      dots.push({ x: r * Math.cos(theta), y, z: r * Math.sin(theta) });
+    }
+  }
+  window._plGlobeDots = dots;
+  const t0 = performance.now();
+  let raf;
+  function draw(now){
+    const t = (now - t0) / 1000;
+    const W = canvas.width, H = canvas.height;
+    const cx = W/2, cy = H/2;
+    const scale = Math.min(W,H) * 0.30;
+    const angle = -t * 0.018;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    ctx.clearRect(0, 0, W, H);
+    dots.forEach(d => {
+      const x = d.x*cosA - d.z*sinA;
+      const y = d.y;
+      const z = d.x*sinA + d.z*cosA + 2.5;
+      if(z <= 0) return;
+      const px = cx + (x/z)*scale*1.5;
+      const py = cy + (y/z)*scale*1.5;
+      // dots on far side of globe are dimmer
+      const depth = (d.x*sinA + d.z*cosA + 1) / 2;
+      const op = 0.18 + depth * 0.38;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.4, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(168,196,240,${op.toFixed(2)})`;
+      ctx.fill();
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  raf = requestAnimationFrame(draw);
+  setTimeout(() => cancelAnimationFrame(raf), 3500);
+}
 
 /* ══ HERO 3D — Flowing ribbon (matches dashboard/login) ══ */
 async function initHeroBg(){
@@ -457,6 +512,39 @@ async function initHeroBg(){
     }));
     root.add(particles);
 
+    // START POSITIONS — globe shape, scatter to random field over 2.5s
+    const startPos = new Float32Array(PC * 3);
+    const gd = window._plGlobeDots;
+    for(let i = 0; i < PC; i++){
+      if(gd && i < gd.length){
+        startPos[i*3]   = gd[i].x * 7;
+        startPos[i*3+1] = gd[i].y * 7;
+        startPos[i*3+2] = gd[i].z * 7;
+      } else {
+        startPos[i*3] = positions[i*3]; startPos[i*3+1] = positions[i*3+1]; startPos[i*3+2] = positions[i*3+2];
+      }
+    }
+    const posAttr = partGeo.attributes.position;
+    for(let i = 0; i < PC; i++) posAttr.setXYZ(i, startPos[i*3], startPos[i*3+1], startPos[i*3+2]);
+    posAttr.needsUpdate = true;
+
+    // CONSTELLATION LINES (Option D) — faint edges between nearby dots, fade in/out
+    const dotPts = Array.from({length:PC}, (_,i) => new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]));
+    const pairs = [];
+    const MAX_D2 = 4.5 * 4.5;
+    for(let i = 0; i < PC; i++)
+      for(let j = i+1; j < PC; j++)
+        if(dotPts[i].distanceToSquared(dotPts[j]) < MAX_D2) pairs.push([i,j]);
+
+    const conLines = Array.from({length:12}, (_,k) => {
+      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      const mat = new THREE.LineBasicMaterial({ color:k%3===2?0xe8d5b7:0xa8c4f0, transparent:true, opacity:0, depthWrite:false });
+      const line = new THREE.Line(geo, mat);
+      root.add(line);
+      return { geo, mat, pairIdx:Math.floor(Math.random()*Math.max(1,pairs.length)),
+               phase:Math.random()*10, duration:8+Math.random()*6, maxOp:0.14+Math.random()*0.18 };
+    });
+
     function onResize(){
       const w = W(), h = H();
       renderer.setSize(w, h, false);
@@ -465,12 +553,48 @@ async function initHeroBg(){
     }
     window.addEventListener('resize', onResize);
 
-    let t0 = performance.now();
+    let t0 = performance.now(), prevNow = t0;
     function tick(now){
       const t = (now - t0) / 1000;
-      
-      // Rotate background particles
-      particles.rotation.y = -t * 0.018;
+      const dt = Math.min((now - prevNow) / 1000, 0.05);
+      prevNow = now;
+
+      // Globe → scatter: lerp particles from globe start to random final positions
+      if(t < 2.5){
+        const ep = 1 - Math.pow(1 - Math.min(1, t / 2.5), 3); // easeOutCubic
+        const pa = partGeo.attributes.position;
+        for(let i = 0; i < PC; i++){
+          pa.setXYZ(i,
+            startPos[i*3]   + (positions[i*3]   - startPos[i*3])   * ep,
+            startPos[i*3+1] + (positions[i*3+1] - startPos[i*3+1]) * ep,
+            startPos[i*3+2] + (positions[i*3+2] - startPos[i*3+2]) * ep
+          );
+        }
+        pa.needsUpdate = true;
+      }
+
+      // Rotate everything together
+      root.rotation.y = -t * 0.018;
+
+      // Constellation lines — only activate after scatter finishes
+      if(pairs.length > 0 && t > 2.0) conLines.forEach(cl => {
+        cl.phase += dt;
+        if(cl.phase >= cl.duration){
+          cl.phase -= cl.duration;
+          cl.pairIdx = Math.floor(Math.random() * pairs.length);
+          cl.maxOp = 0.14 + Math.random() * 0.18;
+        }
+        const prog = cl.phase / cl.duration;
+        const op = prog < 0.2 ? (prog/0.2)*cl.maxOp : prog < 0.8 ? cl.maxOp : ((1-prog)/0.2)*cl.maxOp;
+        cl.mat.opacity = op;
+        if(op > 0.01){
+          const [a,b] = pairs[cl.pairIdx];
+          const pa = cl.geo.attributes.position;
+          pa.setXYZ(0, dotPts[a].x, dotPts[a].y, dotPts[a].z);
+          pa.setXYZ(1, dotPts[b].x, dotPts[b].y, dotPts[b].z);
+          pa.needsUpdate = true;
+        }
+      });
 
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
