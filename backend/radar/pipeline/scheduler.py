@@ -22,10 +22,12 @@ from radar.scrapers.rss_blogs import RSSBlogScraper
 from radar.pipeline.processor import Processor
 from radar.pipeline.summarizer import Summarizer
 from radar.core.database import get_service_client
+from radar.pipeline.digest import DigestSender
 from config import (
     RADAR_SCHEDULER_INTERVAL_MINUTES,
     RADAR_FREE_RELEASE_HOUR_UTC,
     RADAR_FREE_DAILY_LIMIT,
+    RADAR_DIGEST_HOUR_UTC,
 )
 
 logger = logging.getLogger("paperlens.radar.pipeline.scheduler")
@@ -45,8 +47,9 @@ class RadarScheduler:
         self.hf_scraper    = HuggingFaceScraper()
         self.blog_scraper  = RSSBlogScraper()
 
-        self.processor  = Processor()
-        self.summarizer = Summarizer()
+        self.processor      = Processor()
+        self.summarizer     = Summarizer()
+        self.digest_sender  = DigestSender()
 
         # AsyncIOScheduler runs jobs on the existing FastAPI event loop
         self.scheduler = AsyncIOScheduler(timezone="UTC")
@@ -76,6 +79,15 @@ class RadarScheduler:
             trigger=CronTrigger(hour=RADAR_FREE_RELEASE_HOUR_UTC, minute=0),
             id="radar_free_tier_batch",
             name="Radar 4AM free tier release",
+            max_instances=1,
+        )
+
+        # Job 3: Daily email digest — once daily at RADAR_DIGEST_HOUR_UTC (default 8AM UTC)
+        self.scheduler.add_job(
+            self.daily_digest_job,
+            trigger=CronTrigger(hour=RADAR_DIGEST_HOUR_UTC, minute=0),
+            id="radar_daily_digest",
+            name=f"Radar daily digest — {RADAR_DIGEST_HOUR_UTC}:00 UTC",
             max_instances=1,
         )
 
@@ -301,5 +313,23 @@ class RadarScheduler:
         except Exception as e:
             logger.error(
                 f"[RadarScheduler] Free tier batch failed: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+
+    # -----------------------------------------------------------------------
+    # Job 3: Daily email digest
+    # -----------------------------------------------------------------------
+
+    async def daily_digest_job(self) -> None:
+        """
+        Daily digest job — runs at RADAR_DIGEST_HOUR_UTC (default 8AM UTC).
+        Sends top radar items to all subscribed + verified users via Resend.
+        """
+        logger.info("[RadarScheduler] Daily digest job triggered.")
+        try:
+            await self.digest_sender.send_daily_digests()
+        except Exception as e:
+            logger.error(
+                f"[RadarScheduler] Daily digest job failed: {type(e).__name__}: {e}",
                 exc_info=True,
             )

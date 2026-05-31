@@ -405,6 +405,7 @@ HF_RELEVANT_PIPELINE_TAGS = [
 RADAR_SCHEDULER_INTERVAL_MINUTES = int(os.getenv("RADAR_SCHEDULER_INTERVAL_MINUTES", "30"))
 RADAR_FREE_RELEASE_HOUR_UTC       = int(os.getenv("RADAR_FREE_RELEASE_HOUR_UTC", "4"))
 RADAR_FREE_DAILY_LIMIT            = int(os.getenv("RADAR_FREE_DAILY_LIMIT", "20"))
+RADAR_DIGEST_HOUR_UTC             = int(os.getenv("RADAR_DIGEST_HOUR_UTC", "8"))   # 8AM UTC = 1:30PM IST
 
 # Radar LLM — OpenAI primary (production), Groq fallback / testing
 # Groq is current testing provider (free tier, fast).
