@@ -440,7 +440,7 @@ async function sendOtp(){
       const data = await r.json().catch(()=>({}));
       const msg = data.detail || '';
       if(msg.includes('Failed to send')){
-        showAlert('warn', '⚠️ Email service not configured on backend. RESEND_API_KEY needed in .env. See setup notes.');
+        showAlert('err', 'Failed to send verification email. Please try again in a moment.');
       } else {
         showAlert('err', msg || 'Failed to send code. Try again.');
       }
