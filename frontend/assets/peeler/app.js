@@ -308,6 +308,15 @@
 
   /* ─── Auth ─── */
   async function refreshAuthState() {
+    // Demo mode always wins — never show real account in a demo session
+    if (localStorage.getItem('pl_demo') === 'true') {
+      const pill = $("#authPill");
+      if (pill) { pill.textContent = "demo@paperlens.dev"; pill.onclick = null; }
+      const uname = $("#uname"); if (uname) uname.textContent = "Demo User";
+      const uplan = $("#uplan"); if (uplan) uplan.textContent = "Free plan";
+      const uav   = $("#uav");   if (uav)   uav.textContent   = "D";
+      return;
+    }
     try {
       const sbClient = window.PaperLensAuth || (window.PaperLensAuth = (function(){
         const cfg = window.PAPERLENS_CONFIG || {};
@@ -1471,7 +1480,12 @@
 
     const params   = new URLSearchParams(window.location.search);
     const threadId = params.get("thread");
-    if (threadId) await loadThread(threadId).catch(e => toast(e.message));
+    if (threadId) {
+      await loadThread(threadId).catch(e => toast(e.message));
+    } else if (localStorage.getItem('pl_demo') === 'true') {
+      // Demo: auto-load AIAYN peel — no API call, no credits
+      await loadThread('demo-thread-aiayn').catch(() => null);
+    }
 
     const tab = params.get("tab");
     if (tab) setTab(tab);
