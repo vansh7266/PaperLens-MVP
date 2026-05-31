@@ -79,19 +79,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+import os as _os
+
+# Build allowed origins list — includes Netlify deploy + any extra origins from env
+_extra_origins = [
+    o.strip() for o in _os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+_allowed_origins = list(set([
+    FRONTEND_URL,
+    "https://deluxe-pasca-bcf870.netlify.app",   # Netlify production
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5500",
+    "http://localhost:5501",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:5501",
+] + _extra_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_URL,
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5500",
-        "http://localhost:5501",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5500",
-        "http://127.0.0.1:5501",
-    ],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
