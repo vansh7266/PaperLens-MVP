@@ -81,6 +81,19 @@ svg{display:block}
 .card-foot a{color:var(--g1);font-weight:550}
 .terms{text-align:center;font-size:10.5px;color:var(--faint);margin-top:14px}
 .terms a{color:var(--muted);text-decoration:underline}
+/* Plan selector */
+.plan-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.plan-opt{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .2s;position:relative;background:rgba(255,255,255,0.02)}
+.plan-opt:hover{border-color:rgba(168,196,240,0.3);background:rgba(168,196,240,0.03)}
+.plan-opt-selected{border-color:var(--g1)!important;background:rgba(168,196,240,0.06)!important}
+.plan-opt-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.plan-opt-name{font-size:13px;font-weight:650;color:var(--text)}
+.plan-opt-price{font-size:12px;font-weight:600;color:var(--g1)}
+.plan-opt-price span{font-size:10px;color:var(--muted);font-weight:400}
+.plan-opt-perks{font-size:11px;color:var(--muted)}
+.plan-opt-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:650;letter-spacing:.4px;color:var(--g2);background:rgba(245,230,204,0.1);border:1px solid rgba(245,230,204,0.2);padding:2px 6px;border-radius:4px}
+.trial-note{font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.5}
+.trial-note strong{color:var(--g1)}
 .check-sent{display:none;text-align:center;padding:14px 0}
 .check-icon{width:44px;height:44px;margin:0 auto 12px;border-radius:12px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);display:flex;align-items:center;justify-content:center}
 .check-icon svg{width:20px;height:20px;stroke:#4ade80;fill:none;stroke-width:1.7}
@@ -105,7 +118,7 @@ svg{display:block}
     </a>
 
     <div class="brand-tagline">
-      <div class="brand-eyebrow">Start free · No credit card</div>
+      <div class="brand-eyebrow">7-day free trial · No credit card</div>
       <h1 class="brand-title" id="brand-title">&nbsp;</h1>
       <p class="brand-sub">Multi-agent paper analysis, community-curated research radar, and a workflow that finally keeps you ahead of the AI/ML field.</p>
 
@@ -123,8 +136,28 @@ svg{display:block}
     <div class="card">
       <div class="card-head">
         <h2 class="card-title">Create your account</h2>
-        <p class="card-sub">Start with 3 free peels per week</p>
+        <p class="card-sub">7-day free trial · No credit card required</p>
       </div>
+
+      <!-- Plan selector -->
+      <div class="plan-selector" id="plan-selector">
+        <div class="plan-opt plan-opt-selected" id="plan-free" onclick="selectPlan('free')">
+          <div class="plan-opt-top">
+            <span class="plan-opt-name">Free</span>
+            <span class="plan-opt-price">₹0<span>/mo after trial</span></span>
+          </div>
+          <div class="plan-opt-perks">5 peels · 50 chats / month</div>
+        </div>
+        <div class="plan-opt" id="plan-pro" onclick="selectPlan('pro')">
+          <div class="plan-opt-top">
+            <span class="plan-opt-name">⭐ Pro</span>
+            <span class="plan-opt-price">₹999<span>/mo after trial</span></span>
+          </div>
+          <div class="plan-opt-perks">40 peels · 400 chats / month</div>
+          <div class="plan-opt-soon">Coming soon</div>
+        </div>
+      </div>
+      <p class="trial-note">Both plans include a <strong>7-day free trial</strong> — full access, cancel anytime.</p>
 
       <div class="alert alert-err" id="err"></div>
       <div class="alert alert-ok" id="ok"></div>
@@ -200,6 +233,26 @@ let sb;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){}
 if(sb){sb.auth.getSession().then(({data:{session}})=>{if(session)window.location.href='dashboard.html'}).catch(()=>{})}
 
+let selectedPlan = 'free';
+function selectPlan(plan){
+  selectedPlan = plan;
+  document.getElementById('plan-free').className = 'plan-opt' + (plan==='free' ? ' plan-opt-selected' : '');
+  document.getElementById('plan-pro').className  = 'plan-opt' + (plan==='pro'  ? ' plan-opt-selected' : '');
+  if(plan === 'pro'){
+    showProComingSoon();
+    selectedPlan = 'free'; // revert to free since pro is coming soon
+    document.getElementById('plan-free').className = 'plan-opt plan-opt-selected';
+    document.getElementById('plan-pro').className  = 'plan-opt';
+  }
+}
+function showProComingSoon(){
+  const e=document.getElementById('ok');
+  e.textContent='⭐ Pro plan coming soon! You\'ll start on the Free trial for now.';
+  e.style.display='block';
+  document.getElementById('err').style.display='none';
+  setTimeout(()=>{e.style.display='none'},3500);
+}
+
 const $=q=>document.querySelector(q);
 function showErr(m){const e=$('#err');e.textContent=m;e.style.display='block';$('#ok').style.display='none'}
 function showOk(m){const e=$('#ok');e.textContent=m;e.style.display='block';$('#err').style.display='none'}
@@ -225,7 +278,7 @@ async function doSignup(){
   if(!sb){showErr('Authentication service not available');return}
   setLoading(true);
   try{
-    const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{name},emailRedirectTo:window.location.origin+'/dashboard.html'}});
+    const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{name, plan: selectedPlan},emailRedirectTo:window.location.origin+'/dashboard.html'}});
     if(error){showErr(error.message);setLoading(false);return}
     if(data?.session){
       showOk('Account created. Redirecting…');

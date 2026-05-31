@@ -264,7 +264,10 @@ body::before{content:''; position:fixed; inset:0; pointer-events:none; z-index:0
     </div>
     <div class="field">
       <div><div class="field-label">Current plan</div><div class="field-desc">Live from the Peeler usage API</div></div>
-      <div class="field-control"><span class="plan-badge plan-free" id="plan-badge">Free</span></div>
+      <div class="field-control" style="display:flex;align-items:center;gap:10px;">
+        <span class="plan-badge plan-free" id="plan-badge">Free</span>
+        <button id="upgrade-btn" onclick="showUpgradeComingSoon()" style="font-size:11.5px;font-weight:650;color:var(--g1);background:rgba(168,196,240,0.08);border:1px solid rgba(168,196,240,0.22);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .2s;letter-spacing:.2px;">⭐ Upgrade to Pro →</button>
+      </div>
     </div>
     <div class="usage">
       <div class="usage-row"><span class="usage-label">Peels used</span><span class="usage-count" id="peels-count">— / —</span></div>
@@ -372,9 +375,19 @@ function fillUsage(pUsed, pLim, cUsed, cLim){
 }
 function setPlanBadge(plan){
   const el = $('#plan-badge');
-  if(plan === 'pro' || plan === 'team'){ el.className = 'plan-badge plan-pro'; el.textContent = plan === 'pro' ? '✦ Pro' : '✦ Team'; }
-  else { el.className = 'plan-badge plan-free'; el.textContent = 'Free'; }
+  const upgradeBtn = $('#upgrade-btn');
+  if(plan === 'pro' || plan === 'team'){
+    el.className = 'plan-badge plan-pro'; el.textContent = plan === 'pro' ? '✦ Pro' : '✦ Team';
+    if(upgradeBtn) upgradeBtn.style.display = 'none';
+  } else {
+    el.className = 'plan-badge plan-free'; el.textContent = 'Free';
+    if(upgradeBtn) upgradeBtn.style.display = 'inline-flex';
+  }
   $('#user-plan').textContent = plan === 'pro' ? 'Pro plan' : plan === 'team' ? 'Team plan' : 'Free plan';
+}
+
+function showUpgradeComingSoon(){
+  toast('⭐ Pro plan coming soon! We\'ll notify you when it launches.');
 }
 
 async function saveProfile(){
