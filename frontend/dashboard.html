@@ -304,7 +304,7 @@ a{color:inherit; text-decoration:none}
     <p class="hero-sub">Two tools, one workflow — track every new paper, model, and lab release with Research Radar, then peel the ones that matter with Paper Peeler.</p>
   </section>
 
-  <section class="stats-bar" id="tour-stats">
+  <section class="stats-bar">
     <div class="stat-card"><div class="stat-num" id="stat-peels">—</div><div class="stat-label">Peels remaining</div><div class="stat-sub">this 7-day period</div></div>
     <div class="stat-card"><div class="stat-num" id="stat-chats">—</div><div class="stat-label">Chats remaining</div><div class="stat-sub">this 7-day period</div></div>
     <div class="stat-card"><div class="stat-num" id="stat-scanned">—</div><div class="stat-label">Scanned today</div><div class="stat-sub">via Research Radar</div></div>
@@ -312,7 +312,7 @@ a{color:inherit; text-decoration:none}
   </section>
 
   <section class="features-grid">
-    <div class="feature-card" id="tour-peeler" onclick="goTo('peeler.html')">
+    <div class="feature-card" onclick="goTo('peeler.html')">
       <div class="feat-head">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
         <div class="feat-head-text">
@@ -329,7 +329,7 @@ a{color:inherit; text-decoration:none}
       <span class="feat-cta">Open Paper Peeler<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
     </div>
 
-    <div class="feature-card" id="tour-radar" onclick="goTo('radar.html')">
+    <div class="feature-card" onclick="goTo('radar.html')">
       <div class="feat-head">
         <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="feat-head-text">
@@ -667,85 +667,7 @@ async function initBg(){
   await loadActivity(user);
   setTimeout(()=> typewriter($('#hero-title'), 'Your research command center', 42), 360);
   setTimeout(initBg, 250);
-  const isDemo = localStorage.getItem('pl_demo') === 'true';
-  if (!isDemo && !localStorage.getItem('pl_tour_shown')) {
-    setTimeout(startTour, 1800);
-  }
 })();
-
-function startTour(){
-  const STEPS = [
-    { el:'#sidebar',     title:'Navigation',        desc:'Switch between Research Radar, Paper Peeler, and Settings. Collapse the sidebar anytime with the toggle button.', side:'right' },
-    { el:'#tour-stats',  title:'Your Stats',         desc:'Live counts — peels and chats remaining this week, total items scanned today, and high-signal papers across all sources.', side:'bottom' },
-    { el:'#tour-peeler', title:'Paper Peeler',       desc:'Paste any arXiv link or upload a PDF. Three AI agents run in parallel — plain-language walkthrough, animated architecture diagram, and full math breakdown.', side:'top' },
-    { el:'#tour-radar',  title:'Research Radar',     desc:'Live feed of every paper, model, and lab release. Rate items — your ratings improve the feed for everyone on PaperLens.', side:'top' },
-  ];
-  let cur = 0;
-  let highlighted = null;
-
-  const overlay = Object.assign(document.createElement('div'), {id:'pl-tour-overlay'});
-  Object.assign(overlay.style, {position:'fixed',inset:'0',background:'rgba(0,0,0,0.52)',zIndex:'8900',transition:'opacity .25s'});
-  document.body.appendChild(overlay);
-
-  const tip = document.createElement('div');
-  tip.id = 'pl-tour-tip';
-  tip.style.cssText = 'position:fixed;z-index:9000;width:280px;background:rgba(12,12,16,0.97);border:1px solid rgba(168,196,240,0.28);border-radius:14px;padding:18px 20px 16px;box-shadow:0 24px 64px rgba(0,0,0,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);';
-  tip.innerHTML = `
-    <div id="pl-t-prog" style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:rgba(168,196,240,0.65);margin-bottom:9px"></div>
-    <div id="pl-t-title" style="font-size:15px;font-weight:700;letter-spacing:-.3px;color:#f6f7f9;margin-bottom:7px"></div>
-    <div id="pl-t-desc" style="font-size:13px;color:rgba(246,247,249,0.58);line-height:1.62;margin-bottom:16px"></div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <button id="pl-t-skip" style="font-family:inherit;font-size:12px;color:rgba(246,247,249,0.3);background:none;border:none;cursor:pointer;padding:0;transition:color .15s" onmouseover="this.style.color='rgba(246,247,249,0.6)'" onmouseout="this.style.color='rgba(246,247,249,0.3)'">Skip tour</button>
-      <div style="flex:1"></div>
-      <button id="pl-t-next" style="font-family:inherit;font-size:13px;font-weight:650;background:linear-gradient(135deg,#a8c4f0,#f5e6cc);color:#0a0a0c;border:none;border-radius:8px;padding:8px 20px;cursor:pointer"></button>
-    </div>`;
-  document.body.appendChild(tip);
-
-  function clearHighlight(){
-    if(highlighted){ highlighted.style.zIndex=''; highlighted.style.boxShadow=''; highlighted.style.borderRadius=''; highlighted=null; }
-  }
-
-  function show(i){
-    clearHighlight();
-    const step = STEPS[i];
-    const el = document.querySelector(step.el);
-    if(!el){ i < STEPS.length-1 ? show(i+1) : end(); return; }
-
-    el.style.position = el.style.position || 'relative';
-    el.style.zIndex = '8901';
-    el.style.boxShadow = '0 0 0 3px rgba(168,196,240,0.55), 0 0 0 7px rgba(168,196,240,0.12)';
-    el.style.borderRadius = '14px';
-    highlighted = el;
-
-    tip.querySelector('#pl-t-prog').textContent = `Step ${i+1} of ${STEPS.length}`;
-    tip.querySelector('#pl-t-title').textContent = step.title;
-    tip.querySelector('#pl-t-desc').textContent  = step.desc;
-    tip.querySelector('#pl-t-next').textContent  = i === STEPS.length-1 ? 'Done ✓' : 'Next →';
-
-    const rect = el.getBoundingClientRect();
-    const TW=280, TH=180;
-    let top, left;
-    if(step.side==='right')       { top=rect.top+rect.height/2-TH/2; left=rect.right+16; }
-    else if(step.side==='bottom') { top=rect.bottom+14; left=rect.left; }
-    else                          { top=rect.top-TH-14; left=rect.left+rect.width/2-TW/2; }
-    top  = Math.max(16, Math.min(top,  window.innerHeight-TH-16));
-    left = Math.max(16, Math.min(left, window.innerWidth -TW-16));
-    tip.style.top=top+'px'; tip.style.left=left+'px';
-
-    cur = i;
-    tip.querySelector('#pl-t-next').onclick = ()=>{ i<STEPS.length-1 ? show(i+1) : end(); };
-    tip.querySelector('#pl-t-skip').onclick = ()=>end();
-  }
-
-  function end(){
-    clearHighlight();
-    overlay.remove(); tip.remove();
-    localStorage.setItem('pl_tour_shown','true');
-  }
-
-  overlay.onclick = ()=>end();
-  show(0);
-}
 </script>
 </body>
 </html>

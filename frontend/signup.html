@@ -282,7 +282,7 @@ async function doSignup(){
     if(error){showErr(error.message);setLoading(false);return}
     if(data?.session){
       showOk('Account created. Redirecting…');
-      setTimeout(()=>window.location.href='onboarding.html',600);
+      setTimeout(()=>window.location.href='dashboard.html',600);
     }else{
       $('#signup-form').style.display='none';
       $('#verify-email').textContent=em;
@@ -324,7 +324,7 @@ async function doVerifyOtp(){
       return;
     }
     showOk('Email verified! Redirecting...');
-    setTimeout(()=>window.location.href='onboarding.html',600);
+    setTimeout(()=>window.location.href='dashboard.html',600);
   } catch(e) {
     showErr('Verification failed');
     $('#otp-btn').disabled = false;
@@ -380,7 +380,7 @@ async function resendOtp(){
 
 async function googleSignUp(){
   if(!sb){showErr('Authentication service not available');return}
-  try{await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/onboarding.html'}})}
+  try{await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/dashboard.html'}})}
   catch(e){showErr('Could not start Google sign-up')}
 }
 
