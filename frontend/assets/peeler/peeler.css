@@ -2562,10 +2562,9 @@ code, kbd { font-family: var(--mono); }
   position: relative;
   width: 100%;
   height: 100%;
-  /* Guarantee the SVG always has space — without this, generic blueprints
-     collapse to 0×0 inside the flex column. */
-  min-height: 460px;
-  aspect-ratio: 2.4 / 1;
+  /* Full-window height for architecture canvas */
+  min-height: 72vh;
+  aspect-ratio: unset;
   border-radius: 18px;
   background: rgba(8,8,18,0.92);
   border: 1px solid rgba(168,196,240,0.14);
@@ -3757,6 +3756,32 @@ code, kbd { font-family: var(--mono); }
 
 /* ─── Math stage: own Three.js scene instead of the global particle network ───
    The CSS 3D backdrop is suppressed; the math-themed WebGL canvas takes over. */
+/* Play counter for architecture stage */
+.arch-play-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.arch-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(168,196,240,0.3);
+  background: transparent;
+  transition: all 0.4s ease;
+  flex-shrink: 0;
+}
+.arch-dot.is-filled {
+  background: var(--g1);
+  border-color: var(--g1);
+  box-shadow: 0 0 6px rgba(168,196,240,0.5);
+}
+/* Flow panel locked until 3 plays */
+#archFlowPanel { opacity: 0; pointer-events: none; transform: translateY(12px); transition: all 0.5s ease; }
+#archFlowPanel.is-unlocked { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
 #stageMath .stage-bg-3d { display: none; }
 
 /* New math 3D canvas — covers the viewport behind everything */

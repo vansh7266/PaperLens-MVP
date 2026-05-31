@@ -20,6 +20,7 @@
 
   <!-- Three.js citation network background -->
   <canvas id="threeCanvas" aria-hidden="true"></canvas>
+  <canvas id="mathThreeCanvas" aria-hidden="true"></canvas>
 
   <!-- Ambient backdrop -->
   <div class="backdrop-glow" aria-hidden="true"></div>
@@ -464,6 +465,12 @@
               </div>
 
               <!-- Step navigation -->
+              <div class="arch-play-counter" id="archPlayCounter">
+                <span class="arch-dot" id="archDot1"></span>
+                <span class="arch-dot" id="archDot2"></span>
+                <span class="arch-dot" id="archDot3"></span>
+                <span id="archPlayLabel">Play through to unlock data flow</span>
+              </div>
               <div class="arch-nav" id="archNav" role="navigation" aria-label="Step through architecture blocks">
                 <button class="arch-nav-btn" id="archNavPrev" type="button" aria-label="Previous block" disabled>
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 15 7 10 13 5"/></svg>
@@ -698,6 +705,78 @@ try {
 } catch (_) {
   /* Three.js unavailable — canvas stays out of render */
 }
+</script>
+
+<script type="module">
+/* Math stage wave surface background */
+window.v7_initMathBg = async function() {
+  const canvas = document.getElementById('mathThreeCanvas');
+  if (!canvas || canvas.dataset.mathInit) return;
+  canvas.dataset.mathInit = '1';
+  try {
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js');
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+    renderer.setSize(W(), H());
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setClearColor(0x000000, 0);
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, W() / H(), 0.1, 200);
+    camera.position.set(0, 9, 14);
+    camera.lookAt(0, 0, 0);
+
+    // Wave surface — geometry created ONCE, only Z values updated each frame
+    const SEGS = 52;
+    const geo  = new THREE.PlaneGeometry(26, 18, SEGS, SEGS);
+    const mat  = new THREE.MeshBasicMaterial({
+      color: 0xa8c4f0, wireframe: true, transparent: true, opacity: 0.14
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2.4;
+    scene.add(mesh);
+
+    // Cream accent particles
+    const pGeo = new THREE.BufferGeometry();
+    const pArr = new Float32Array(80 * 3);
+    for (let i = 0; i < 80; i++) {
+      pArr[i*3]   = (Math.random() - 0.5) * 26;
+      pArr[i*3+1] = (Math.random() - 0.5) * 10;
+      pArr[i*3+2] = (Math.random() - 0.5) * 18;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
+    scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({
+      color: 0xf5e6cc, size: 0.06, sizeAttenuation: false, transparent: true, opacity: 0.45
+    })));
+
+    const posAttr = geo.attributes.position;
+
+    function tick() {
+      requestAnimationFrame(tick);
+      const t = performance.now() * 0.0007;
+      // Update only Z (wave height) — no geometry rebuild
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = posAttr.getX(i);
+        const y = posAttr.getY(i);
+        posAttr.setZ(i,
+          Math.sin(x * 0.38 + t) * 0.55 +
+          Math.cos(y * 0.32 + t * 0.8) * 0.45 +
+          Math.sin((x + y) * 0.22 + t * 0.5) * 0.25
+        );
+      }
+      posAttr.needsUpdate = true;
+      mesh.rotation.z = t * 0.018;
+      renderer.render(scene, camera);
+    }
+    tick();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = W() / H();
+      camera.updateProjectionMatrix();
+      renderer.setSize(W(), H());
+    });
+  } catch(_) { /* Three.js unavailable */ }
+};
 </script>
 </body>
 </html>

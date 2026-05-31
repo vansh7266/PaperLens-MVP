@@ -1494,6 +1494,7 @@
     archStepIndex:   0,       // current step position in archNodeOrder
     archAutoTimer:   null,    // setTimeout handle for auto-play
     archAutoPlaying: false,   // is auto-play currently running?
+    archPlayCount:   0,       // how many full auto-play cycles completed
     streamObserver: null,
     seqObserver: null,
   };
@@ -1784,6 +1785,7 @@
     } else if (name === "math") {
       const equations = state.currentPeel ? (state.currentPeel.math_peel || []) : [];
       v7_renderMathTutor(equations);
+      v7_initMathBg();
     } else if (name === "chat") {
       // chat content already pre-rendered; just focus the input
       setTimeout(() => {
@@ -2577,6 +2579,22 @@
 
   /* Architecture overview finished (peel button is showing) — unlock the
      data-flow steps so they can animate in on scroll. */
+  function v7_updateArchPlayCounter() {
+    const count = v7.archPlayCount || 0;
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById("archDot" + i);
+      if (dot) dot.classList.toggle("is-filled", i <= count);
+    }
+    const label = document.getElementById("archPlayLabel");
+    if (!label) return;
+    if (count >= 3) {
+      label.textContent = "✓ Data flow & math peel unlocked";
+      label.style.color = "var(--g1)";
+    } else {
+      label.textContent = count + "/3 — play through to unlock data flow";
+    }
+  }
+
   function v7_markArchComplete() {
     v7.archComplete = true;
     if (typeof v7.revealFlowIfVisible === "function") v7.revealFlowIfVisible();
@@ -2837,10 +2855,28 @@
         v7.archAutoTimer = window.setTimeout(step, 2100);
       } else {
         v7_stopArchAutoPlay();
-        // Fallback checks once the tour finishes
+        // Track full play count
+        v7.archPlayCount = (v7.archPlayCount || 0) + 1;
+        v7_updateArchPlayCounter();
+
         const peelCta = document.getElementById("archPeelCta");
         if (peelCta) setTimeout(() => peelCta.classList.add("is-ready"), 800);
-        v7_markArchComplete();
+
+        if (v7.archPlayCount >= 3) {
+          // Unlock data flow + math peel after 3 full plays
+          v7_markArchComplete();
+          const flowPanel = document.getElementById("archFlowPanel");
+          if (flowPanel) setTimeout(() => flowPanel.classList.add("is-unlocked"), 600);
+          setTimeout(() => v7_revealCta("ctaToMath"), 1400);
+        } else {
+          // Auto-reset to start for next replay
+          setTimeout(() => {
+            v7.archStepIndex = 0;
+            const firstId = v7.archNodeOrder[0];
+            if (firstId) v7_focusArchNode(firstId);
+            v7_updateArchNav();
+          }, 1200);
+        }
       }
     };
     v7.archAutoTimer = window.setTimeout(step, 2100);
