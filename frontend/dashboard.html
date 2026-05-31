@@ -1,1000 +1,662 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Dashboard — PaperLens</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
-    :root {
-      --bg: #0a0a0a;
-      --s1: #111;
-      --s2: #161616;
-      --s3: #1a1a1a;
-      --border: rgba(255, 255, 255, 0.07);
-      --bh: rgba(255, 255, 255, 0.15);
-      --text: #fff;
-      --muted: rgba(255, 255, 255, 0.5);
-      --faint: rgba(255, 255, 255, 0.25);
-      --g1: #a8c4f0;
-      --g2: #f5e6cc;
-      --font: 'Inter', -apple-system, sans-serif;
-      --sw: 260px;
-    }
-
-    html {
-      scroll-behavior: smooth
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-      min-height: 100vh;
-      display: flex;
-      overflow-x: hidden
-    }
-
-    a {
-      text-decoration: none;
-      color: inherit
-    }
-
-    button {
-      font-family: var(--font);
-      cursor: pointer
-    }
-
-    ::-webkit-scrollbar {
-      width: 4px
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 2px
-    }
-
-    /* ════ SIDEBAR ════
-   Fixed on left. transform slides it off-screen when .closed.
-   z-index 50 — below topbar overlay. */
-    .sidebar {
-      width: var(--sw);
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      background: var(--bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      z-index: 50;
-      transition: transform 0.25s ease;
-      will-change: transform;
-    }
-
-    .sidebar.closed {
-      transform: translateX(calc(-1 * var(--sw)));
-    }
-
-    /* Sidebar header */
-    .sb-head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 18px 16px 14px 18px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .sb-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      min-width: 0
-    }
-
-    .logo-b {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      background: linear-gradient(135deg, var(--g1), var(--g2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text
-    }
-
-    .logo-l {
-      font-size: 15px;
-      font-weight: 300;
-      letter-spacing: 3px;
-      color: var(--muted)
-    }
-
-    /* Nav */
-    .sb-nav {
-      flex: 1;
-      padding: 12px 10px;
-      overflow-y: auto
-    }
-
-    .sb-sec {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: var(--faint);
-      text-transform: uppercase;
-      padding: 10px 10px 5px
-    }
-
-    .sb-item {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-size: 13px;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s;
-      margin-bottom: 1px;
-      text-decoration: none;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left
-    }
-
-    .sb-item:hover {
-      background: var(--s2);
-      color: var(--text)
-    }
-
-    .sb-item.active {
-      background: var(--s2);
-      color: var(--text);
-      font-weight: 500
-    }
-
-    .sb-item svg {
-      width: 15px;
-      height: 15px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      flex-shrink: 0
-    }
-
-    .sb-badge {
-      margin-left: auto;
-      font-size: 10px;
-      font-weight: 600;
-      background: rgba(168, 196, 240, 0.12);
-      color: var(--g1);
-      padding: 1px 7px;
-      border-radius: 99px
-    }
-
-    .topic-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0
-    }
-
-    .sb-bottom {
-      padding: 12px 10px;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0
-    }
-
-    .user-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 10px;
-      border-radius: 9px;
-      cursor: pointer;
-      transition: background 0.15s;
-      width: 100%;
-      border: none;
-      background: none;
-      text-align: left
-    }
-
-    .user-row:hover {
-      background: var(--s2)
-    }
-
-    .uav {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--g1), var(--g2));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: #000;
-      flex-shrink: 0
-    }
-
-    .uinfo {
-      flex: 1;
-      min-width: 0
-    }
-
-    .uname {
-      font-size: 12.5px;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis
-    }
-
-    .uplan {
-      font-size: 10.5px;
-      color: var(--faint)
-    }
-
-    /* ════ MAIN ════
-   margin-left = sidebar width when open.
-   margin-left = 0 when sidebar is closed.
-   Transitions in sync with sidebar. */
-    .main {
-      flex: 1;
-      margin-left: var(--sw);
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      min-height: 100vh;
-      transition: margin-left 0.25s ease;
-      will-change: margin-left;
-    }
-
-    .main.wide {
-      margin-left: 0
-    }
-
-    /* ════ TOPBAR ════ */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 13px 24px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(10, 10, 10, 0.9);
-      backdrop-filter: blur(12px);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      flex-shrink: 0;
-    }
-
-    .tb-left {
-      display: flex;
-      align-items: center;
-      gap: 12px
-    }
-
-    /* ── SIDEBAR TOGGLE BUTTON (always visible in topbar, like Claude/ChatGPT) ── */
-    .sb-toggle {
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: transparent;
-      cursor: pointer;
-      color: var(--muted);
-      transition: all 0.15s;
-      flex-shrink: 0;
-    }
-
-    .sb-toggle:hover {
-      background: var(--s2);
-      color: var(--text);
-      border-color: var(--bh)
-    }
-
-    .sb-toggle svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round
-    }
-
-    .tb-title {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.3px
-    }
-
-    .tb-date {
-      font-size: 12px;
-      color: var(--faint)
-    }
-
-    .tb-right {
-      display: flex;
-      align-items: center;
-      gap: 10px
-    }
-
-    .ftabs {
-      display: flex;
-      gap: 4px
-    }
-
-    .ftab {
-      font-family: var(--font);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s
-    }
-
-    .ftab:hover {
-      color: var(--text);
-      border-color: var(--bh)
-    }
-
-    .ftab.active {
-      background: var(--text);
-      color: #000;
-      border-color: var(--text)
-    }
-
-    .btn-refresh {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--font);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      background: var(--s2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      cursor: pointer;
-      transition: all 0.15s
-    }
-
-    .btn-refresh:hover {
-      color: var(--text);
-      border-color: var(--bh)
-    }
-
-    .btn-refresh svg {
-      width: 13px;
-      height: 13px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round
-    }
-
-    /* ── Stats ── */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .sc {
-      background: var(--s1);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px
-    }
-
-    .sc-n {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.8px;
-      background: linear-gradient(135deg, var(--g1), var(--g2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text
-    }
-
-    .sc-l {
-      font-size: 11px;
-      color: var(--faint);
-      margin-top: 2px
-    }
-
-    /* ── Upgrade banner ── */
-    .up-banner {
-      margin: 14px 24px 0;
-      background: linear-gradient(135deg, rgba(168, 196, 240, 0.06), rgba(245, 230, 204, 0.04));
-      border: 1px solid rgba(168, 196, 240, 0.15);
-      border-radius: 12px;
-      padding: 13px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px
-    }
-
-    .up-txt {
-      font-size: 13px;
-      color: var(--muted)
-    }
-
-    .up-txt strong {
-      color: var(--text)
-    }
-
-    .btn-up {
-      font-family: var(--font);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--g1), var(--g2));
-      color: #000;
-      white-space: nowrap;
-      transition: opacity 0.15s
-    }
-
-    .btn-up:hover {
-      opacity: 0.88
-    }
-
-    /* ── Feed ── */
-    .feed {
-      flex: 1;
-      padding: 16px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px
-    }
-
-    /* ── Paper card ── */
-    .pc {
-      background: var(--s1);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      animation: ci 0.4s ease both
-    }
-
-    @keyframes ci {
-      from {
-        opacity: 0;
-        transform: translateY(8px)
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0)
-      }
-    }
-
-    .pc:hover {
-      border-color: var(--bh);
-      background: var(--s2);
-      transform: translateY(-1px)
-    }
-
-    .cm {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      flex-wrap: wrap
-    }
-
-    .src {
-      font-size: 10.5px;
-      font-weight: 500;
-      padding: 2px 9px;
-      border-radius: 5px;
-      background: var(--s3);
-      border: 1px solid var(--border);
-      color: var(--muted)
-    }
-
-    .time {
-      font-size: 11px;
-      color: var(--faint)
-    }
-
-    .pb {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 9px;
-      border-radius: 5px;
-      background: linear-gradient(135deg, var(--g1), var(--g2));
-      color: #000;
-      margin-left: auto
-    }
-
-    .tb2 {
-      font-size: 10px;
-      font-weight: 500;
-      padding: 2px 9px;
-      border-radius: 5px;
-      background: var(--s3);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      margin-left: auto
-    }
-
-    .ct {
-      font-size: 13.5px;
-      font-weight: 600;
-      letter-spacing: -0.2px;
-      margin-bottom: 7px;
-      line-height: 1.45
-    }
-
-    .cs {
-      font-size: 12.5px;
-      color: var(--muted);
-      line-height: 1.65;
-      margin-bottom: 12px
-    }
-
-    .cf {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      flex-wrap: wrap
-    }
-
-    .tp {
-      font-size: 10.5px;
-      color: var(--faint);
-      border: 1px solid var(--border);
-      padding: 2px 9px;
-      border-radius: 5px
-    }
-
-    .d-e {
-      color: #4ade80;
-      border-color: rgba(74, 222, 128, 0.2)
-    }
-
-    .d-m {
-      color: #facc15;
-      border-color: rgba(250, 204, 21, 0.2)
-    }
-
-    .d-h {
-      color: #f87171;
-      border-color: rgba(248, 113, 113, 0.2)
-    }
-
-    .ca {
-      margin-left: auto;
-      font-size: 11.5px;
-      color: var(--faint);
-      transition: color 0.15s
-    }
-
-    .pc:hover .ca {
-      color: var(--g1)
-    }
-
-    /* ── Skeleton ── */
-    .sk {
-      background: var(--s1);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px
-    }
-
-    .skl {
-      background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
-      background-size: 200% 100%;
-      animation: sh 1.5s infinite;
-      border-radius: 4px;
-      height: 12px;
-      margin-bottom: 8px
-    }
-
-    @keyframes sh {
-      0% {
-        background-position: 200% 0
-      }
-
-      100% {
-        background-position: -200% 0
-      }
-    }
-
-    /* ── Mobile overlay ── */
-    .mob-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 40
-    }
-
-    .mob-overlay.show {
-      display: block
-    }
-
-    @media(max-width:768px) {
-      .sidebar {
-        transform: translateX(calc(-1 * var(--sw)))
-      }
-
-      .sidebar.mob-open {
-        transform: translateX(0) !important
-      }
-
-      .main {
-        margin-left: 0 !important
-      }
-
-      .ftabs {
-        display: none
-      }
-
-      .stats {
-        grid-template-columns: 1fr 1fr;
-        padding: 14px 16px
-      }
-
-      .topbar,
-      .feed {
-        padding-left: 16px;
-        padding-right: 16px
-      }
-
-      .up-banner {
-        margin: 12px 16px 0;
-        flex-direction: column;
-        align-items: flex-start
-      }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Dashboard — PaperLens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#09090b;
+  --text:#f6f7f9; --muted:rgba(246,247,249,0.62); --faint:rgba(246,247,249,0.34);
+  --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.14);
+  --s1:rgba(17,17,19,0.62);
+  --g1:#a8c4f0; --g2:#f5e6cc;
+  --sidebar-w:240px;
+  --tf:.22s cubic-bezier(.4,0,.2,1);
+  --radius-md:14px; --radius-lg:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Inter',-apple-system,system-ui,sans-serif;
+  font-size:14px; line-height:1.55;
+  overflow-x:hidden; min-height:100vh;
+}
+svg{display:block}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+a{color:inherit; text-decoration:none}
+
+#dashCanvas{
+  position:fixed; inset:0; width:100%; height:100%;
+  pointer-events:none; z-index:0; opacity:0;
+  transition:opacity 1.6s ease;
+}
+#dashCanvas.ready{opacity:1}
+.bg-veil{
+  position:fixed; inset:0; pointer-events:none; z-index:1;
+  background:
+    radial-gradient(ellipse 1100px 700px at 35% 15%, rgba(168,196,240,0.12), transparent 70%),
+    radial-gradient(ellipse 800px 600px at 85% 85%, rgba(245,230,204,0.06), transparent 70%),
+    linear-gradient(180deg, rgba(9,9,11,0.5) 0%, rgba(9,9,11,0.2) 40%, rgba(9,9,11,0.55) 100%);
+}
+
+/* SIDEBAR */
+.sidebar{
+  position:fixed; top:12px; left:12px; bottom:12px; width:var(--sidebar-w);
+  background:rgba(15,15,18,0.82);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  backdrop-filter:blur(22px) saturate(140%);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;
+  display:flex; flex-direction:column; z-index:30;
+  transition:transform var(--tf);
+  box-shadow:0 14px 50px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow:hidden;
+  opacity:0; transform:translateX(-12px);
+  animation:slideInLeft .55s .15s ease both;
+}
+@keyframes slideInLeft{to{opacity:1;transform:translateX(0)}}
+.sidebar.closed{transform:translateX(calc(-100% - 30px))}
+.sb-head{padding:18px 16px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0}
+.sb-logo{display:flex; align-items:center; gap:8px}
+.sb-logo svg{width:22px; height:22px}
+.sb-logo-text{display:flex; align-items:baseline; line-height:1}
+.logo-b{font-size:15px; font-weight:700; letter-spacing:-0.3px; background:linear-gradient(135deg,var(--g1),var(--g2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text}
+.logo-l{font-size:15px; font-weight:300; letter-spacing:3.5px; color:var(--muted)}
+
+.sb-close-btn{width:26px; height:26px; border-radius:6px; background:transparent; border:1px solid var(--border); color:var(--muted); display:grid; place-items:center; cursor:pointer; transition:all var(--tf)}
+.sb-close-btn:hover{color:var(--text); border-color:rgba(255,255,255,0.13); background:rgba(255,255,255,0.04)}
+.sb-close-btn svg{width:14px; height:14px; stroke:currentColor; stroke-width:2}
+
+.sb-nav{flex:1; padding:14px 12px; overflow-y:auto}
+.sb-sec{font-size:10px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); padding:14px 10px 8px}
+.sb-item{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 10px; border-radius:8px;
+  font-size:13px; color:var(--muted);
+  transition:all var(--tf); position:relative;
+}
+.sb-item svg{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0}
+.sb-item:hover{background:rgba(255,255,255,0.04); color:var(--text); transform:translateX(2px)}
+.sb-item.active{background:rgba(168,196,240,0.1); color:var(--g1)}
+.sb-item.active::before{content:''; position:absolute; left:0; top:18%; bottom:18%; width:2px; background:linear-gradient(180deg,var(--g1),var(--g2)); border-radius:2px}
+
+.sb-foot{padding:14px; border-top:1px solid rgba(255,255,255,0.05)}
+.user-chip{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); transition:all .25s; width:100%}
+.user-chip:hover{background:rgba(255,255,255,0.07); border-color:rgba(168,196,240,0.28); transform:translateY(-1px)}
+.user-avatar{width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--g1),var(--g2)); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#000; flex-shrink:0}
+.user-info{min-width:0; flex:1}
+.user-name{font-size:12.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.user-plan{font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+/* MAIN */
+.main{
+  margin-left:calc(var(--sidebar-w) + 24px);
+  min-height:100vh;
+  position:relative; z-index:2;
+  padding:32px 44px 60px;
+  transition:margin-left var(--tf);
+}
+.sidebar.closed ~ .main{margin-left:0}
+
+.topbar{display:flex; align-items:center; gap:14px; margin-bottom:30px; opacity:0; animation:fadeUp .55s .1s ease both}
+.hamburger{width:34px; height:34px; border-radius:9px; display:none; align-items:center; justify-content:center; border:1px solid var(--border); background:rgba(17,17,20,0.6); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); transition:all var(--tf)}
+.hamburger:hover{border-color:var(--border-strong); background:rgba(17,17,20,0.9)}
+.hamburger svg{width:16px; height:16px; stroke:var(--text); stroke-width:2}
+.topbar-status{margin-left:auto; display:flex; align-items:center; gap:10px}
+.status-pill{font-size:11px; padding:6px 12px 6px 22px; border-radius:99px; background:rgba(168,196,240,0.06); border:1px solid rgba(168,196,240,0.16); color:var(--g1); font-weight:550; position:relative; letter-spacing:.4px}
+.status-pill::before{content:''; position:absolute; left:9px; top:50%; width:6px; height:6px; border-radius:50%; background:#4ade80; transform:translateY(-50%); box-shadow:0 0 10px rgba(74,222,128,0.6); animation:pulseDot 2.4s ease infinite}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* HERO */
+.hero{padding:8px 0 28px; max-width:1100px}
+.hero-eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:10.5px; font-weight:650; letter-spacing:1.6px; text-transform:uppercase;
+  color:rgba(168,196,240,0.86);
+  padding:6px 14px 6px 26px;
+  border:1px solid rgba(168,196,240,0.18);
+  border-radius:99px;
+  background:rgba(17,17,19,0.46);
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+  position:relative; margin-bottom:18px;
+  opacity:0; animation:fadeUp .55s .2s ease both;
+}
+.hero-eyebrow::before{content:''; position:absolute; left:11px; top:50%; width:7px; height:7px; border-radius:50%; transform:translateY(-50%); background:var(--g1); box-shadow:0 0 14px rgba(168,196,240,0.75); animation:pulseDot 2.4s ease infinite}
+.hero-title{
+  font-size:clamp(36px, 4.4vw, 60px);
+  font-weight:780; letter-spacing:-2.4px;
+  line-height:1.04;
+  background:linear-gradient(135deg, #fff 28%, rgba(168,196,240,0.72));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  margin-bottom:14px; min-height:1em;
+}
+.cursor{display:inline-block; width:3px; height:.82em; background:var(--g1); margin-left:3px; vertical-align:text-bottom; border-radius:2px; animation:blink 1s step-end infinite; box-shadow:0 0 12px rgba(168,196,240,0.7)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-sub{font-size:15px; color:var(--muted); max-width:640px; margin-bottom:0; opacity:0; animation:fadeUp .55s .55s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* STATS — premium minimalist */
+.stats-bar{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:36px}
+.stat-card{
+  padding:18px 20px; border-radius:var(--radius-md);
+  background:rgba(17,17,20,0.6);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  backdrop-filter:blur(20px) saturate(140%);
+  border:1px solid var(--border);
+  transition:all var(--tf); position:relative; overflow:hidden;
+  opacity:0; animation:fadeUp .55s ease both;
+}
+.stat-card:nth-child(1){animation-delay:.65s}
+.stat-card:nth-child(2){animation-delay:.72s}
+.stat-card:nth-child(3){animation-delay:.79s}
+.stat-card:nth-child(4){animation-delay:.86s}
+.stat-card::before{content:''; position:absolute; inset:-1px; background:linear-gradient(135deg, rgba(168,196,240,0.18), transparent 50%); border-radius:inherit; opacity:0; transition:opacity var(--tf); pointer-events:none}
+.stat-card:hover{border-color:rgba(168,196,240,0.26); transform:translateY(-2px)}
+.stat-card:hover::before{opacity:1}
+.stat-card > *{position:relative; z-index:1}
+.stat-num{font-size:32px; font-weight:780; background:linear-gradient(135deg,var(--g1),var(--g2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums; letter-spacing:-1px}
+.stat-label{font-size:11.5px; color:var(--muted); letter-spacing:.4px; font-weight:550}
+.stat-sub{font-size:10.5px; color:var(--faint); margin-top:3px}
+
+/* FEATURE CARDS — premium with corner glow + animated icon */
+.features-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:20px; margin-bottom:38px}
+.feature-card{
+  padding:32px 28px 28px; border-radius:var(--radius-lg);
+  background:linear-gradient(180deg, rgba(20,20,24,0.78), rgba(13,13,16,0.62));
+  -webkit-backdrop-filter:blur(24px) saturate(140%);
+  backdrop-filter:blur(24px) saturate(140%);
+  border:1px solid var(--border);
+  position:relative; overflow:hidden;
+  transition:all .35s cubic-bezier(.4,0,.2,1); cursor:pointer;
+  opacity:0; animation:fadeUp .6s ease both;
+  transform-style:preserve-3d;
+}
+.feature-card:nth-child(1){animation-delay:.95s}
+.feature-card:nth-child(2){animation-delay:1.05s}
+/* Top accent line */
+.feature-card::before{content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg, transparent, rgba(168,196,240,0.55), transparent); opacity:0; transition:opacity .35s ease}
+/* Corner glow */
+.feature-card::after{content:''; position:absolute; top:-50%; right:-50%; width:300px; height:300px; background:radial-gradient(circle, rgba(168,196,240,0.14), transparent 60%); opacity:0; transition:opacity .35s ease; pointer-events:none}
+.feature-card:hover{border-color:rgba(168,196,240,0.34); transform:translateY(-4px); box-shadow:0 32px 70px -36px rgba(168,196,240,0.32)}
+.feature-card:hover::before, .feature-card:hover::after{opacity:1}
+.feature-card > *{position:relative; z-index:1}
+
+.feat-head{display:flex; align-items:flex-start; gap:14px; margin-bottom:18px}
+.feat-icon{
+  width:54px; height:54px; border-radius:14px; flex-shrink:0;
+  background:linear-gradient(135deg, rgba(168,196,240,0.22), rgba(245,230,204,0.08));
+  border:1px solid rgba(168,196,240,0.3);
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 20px -8px rgba(168,196,240,0.25);
+  position:relative; overflow:hidden;
+}
+.feat-icon::before{content:''; position:absolute; inset:0; background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), transparent 60%); opacity:0; transition:opacity .35s ease}
+.feature-card:hover .feat-icon{transform:scale(1.08) rotate(-4deg)}
+.feature-card:hover .feat-icon::before{opacity:1}
+.feat-icon svg{width:24px; height:24px; stroke:var(--g1); fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; position:relative; z-index:1}
+.feat-head-text{flex:1; min-width:0}
+.feat-title{font-size:22px; font-weight:680; letter-spacing:-0.7px; color:var(--text); margin-bottom:4px}
+.feat-tagline{font-size:12px; color:var(--g1); font-weight:550; letter-spacing:.4px; text-transform:uppercase}
+
+.feat-desc{font-size:13.5px; color:var(--muted); line-height:1.7; margin-bottom:18px}
+.feat-bullets{margin-bottom:22px; list-style:none; padding:0}
+.feat-bullets li{padding:6px 0 6px 22px; font-size:12.5px; color:var(--muted); position:relative}
+.feat-bullets li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:5px; border-radius:50%; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 8px rgba(168,196,240,0.5)}
+
+.feat-cta{display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:10px; background:linear-gradient(135deg,var(--g1),var(--g2)); color:#0a0a0c; font-size:13px; font-weight:650; transition:all var(--tf)}
+.feat-cta:hover{transform:translateX(3px); box-shadow:0 10px 26px -8px rgba(168,196,240,0.5)}
+.feat-cta svg{width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; transition:transform var(--tf)}
+.feature-card:hover .feat-cta svg{transform:translateX(2px)}
+
+/* ACTIVITY */
+.activity-section{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.panel{padding:22px 22px 18px; border-radius:var(--radius-lg); background:rgba(17,17,20,0.55); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border:1px solid var(--border); min-height:240px; opacity:0; animation:fadeUp .6s ease both}
+.panel:nth-child(1){animation-delay:1.2s}
+.panel:nth-child(2){animation-delay:1.28s}
+.panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
+.panel-title{font-size:13.5px; font-weight:650; color:var(--text)}
+.panel-link{font-size:11.5px; color:var(--g1); transition:opacity var(--tf)}
+.panel-link:hover{opacity:.7}
+.activity-item{display:flex; align-items:flex-start; gap:12px; padding:11px 6px; border-bottom:1px solid var(--border); cursor:pointer; transition:background var(--tf), transform var(--tf); margin:0 -6px; border-radius:8px}
+.activity-item:last-child{border-bottom:none}
+.activity-item:hover{background:rgba(168,196,240,0.05); transform:translateX(2px)}
+.act-dot{width:8px; height:8px; border-radius:50%; margin-top:8px; background:var(--g1); box-shadow:0 0 10px rgba(168,196,240,0.5); flex-shrink:0}
+.act-dot.gold{background:var(--g2); box-shadow:0 0 10px rgba(245,230,204,0.4)}
+.act-content{flex:1; min-width:0}
+.act-title{font-size:12.5px; font-weight:550; color:var(--text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.act-meta{font-size:10.5px; color:var(--faint)}
+.empty-state{padding:36px 16px; text-align:center; color:var(--faint); font-size:12.5px}
+
+@media (max-width:900px){
+  .activity-section{grid-template-columns:1fr}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .sidebar{transform:translateX(calc(-100% - 30px))}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0; padding:24px 18px}
+  .hamburger{display:flex}
+}
+@media (max-width:520px){.stats-bar{grid-template-columns:1fr} .features-grid{grid-template-columns:1fr}}
+
+.toast{position:fixed; bottom:30px; left:50%; transform:translateX(-50%); padding:11px 22px; border-radius:99px; background:rgba(20,22,28,0.96); color:var(--text); border:1px solid var(--border-strong); font-size:13px; z-index:100; -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,18px)}to{opacity:1;transform:translate(-50%,0)}}
+</style>
 </head>
-
 <body>
 
-  <div class="mob-overlay" id="mob-overlay" onclick="closeMob()"></div>
+<canvas id="dashCanvas" aria-hidden="true"></canvas>
+<div class="bg-veil" aria-hidden="true"></div>
 
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-head">
-      <div class="sb-logo">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <circle cx="10" cy="10" r="7" stroke="url(#slg)" stroke-width="1.5" />
-          <circle cx="10" cy="10" r="3.2" stroke="url(#slg)" stroke-width="1" opacity="0.6" />
-          <circle cx="10" cy="10" r="1.3" fill="url(#slg)" />
-          <line x1="15.2" y1="15.2" x2="19.5" y2="19.5" stroke="white" stroke-width="1.8" stroke-linecap="round"
-            opacity="0.7" />
-          <defs>
-            <linearGradient id="slg" x1="0" y1="0" x2="22" y2="22">
-              <stop offset="0%" stop-color="#a8c4f0" />
-              <stop offset="100%" stop-color="#f5e6cc" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <span class="logo-b">Paper</span><span class="logo-l">Lens</span>
-      </div>
-    </div>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <a class="sb-logo" href="dashboard.html">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+        <circle cx="13" cy="13" r="9" stroke="url(#slg)" stroke-width="1.5"/>
+        <circle cx="13" cy="13" r="4.5" stroke="url(#slg)" stroke-width="1" opacity="0.6"/>
+        <circle cx="13" cy="13" r="1.8" fill="url(#slg)"/>
+        <line x1="19.5" y1="19.5" x2="25.5" y2="25.5" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <defs><linearGradient id="slg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stop-color="#a8c4f0"/><stop offset="100%" stop-color="#f5e6cc"/></linearGradient></defs>
+      </svg>
+      <div class="sb-logo-text"><span class="logo-b">Paper</span><span class="logo-l">Lens</span></div>
+    </a>
+    <button class="sb-close-btn" onclick="toggleSidebar()" aria-label="Collapse">
+      <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
 
-    <nav class="sb-nav">
-      <div class="sb-sec">Main</div>
-      <a class="sb-item active" href="dashboard.html">
-        <svg viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-        Feed <span class="sb-badge" id="feed-cnt">—</span>
-      </a>
-      <a class="sb-item" href="peeler.html">
-        <svg viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8" />
-          <circle cx="11" cy="11" r="4" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        Paper Peeler
-      </a>
-      <a class="sb-item" href="#">
-        <svg viewBox="0 0 24 24">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-        </svg>
-        Saved papers
-      </a>
-      <a class="sb-item" href="#">
-        <svg viewBox="0 0 24 24">
-          <path d="M18 20V10M12 20V4M6 20v-6" />
-        </svg>
-        Trending
-      </a>
-      <a class="sb-item" href="settings.html">
-        <svg viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-        Settings
-      </a>
-      <div class="sb-sec">Topics</div>
-      <button class="sb-item" onclick="filterTopic('LLMs',this)"><span class="topic-dot"
-          style="background:#a8c4f0"></span>LLMs</button>
-      <button class="sb-item" onclick="filterTopic('Computer Vision',this)"><span class="topic-dot"
-          style="background:#f0a8c4"></span>Computer Vision</button>
-      <button class="sb-item" onclick="filterTopic('RL',this)"><span class="topic-dot"
-          style="background:#a8f0c4"></span>RL / Agents</button>
-      <button class="sb-item" onclick="filterTopic('Diffusion',this)"><span class="topic-dot"
-          style="background:#f0d5a8"></span>Diffusion Models</button>
-      <button class="sb-item" onclick="filterTopic('NLP',this)"><span class="topic-dot"
-          style="background:#c4a8f0"></span>NLP</button>
-      <button class="sb-item" style="color:var(--faint);font-size:12px" onclick="window.location.href='settings.html'">
-        <svg viewBox="0 0 24 24" style="width:13px;height:13px">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        Manage topics
-      </button>
-    </nav>
+  <nav class="sb-nav">
+    <div class="sb-sec">Main</div>
+    <a class="sb-item active" href="dashboard.html"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a class="sb-item" href="peeler.html"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Paper Peeler</a>
+    <a class="sb-item" href="radar.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Research Radar</a>
+    <a class="sb-item" href="radar.html#saved"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved</a>
+    <div class="sb-sec">Account</div>
+    <a class="sb-item" href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  </nav>
 
-    <div class="sb-bottom">
-      <button class="user-row" onclick="window.location.href='settings.html'">
-        <div class="uav" id="uav">?</div>
-        <div class="uinfo">
-          <div class="uname" id="uname">Loading...</div>
-          <div class="uplan" id="uplan">Free plan</div>
-        </div>
-      </button>
-    </div>
-  </aside>
+  <div class="sb-foot">
+    <a class="user-chip" href="settings.html">
+      <div class="user-avatar" id="user-avatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">User</div>
+        <div class="user-plan" id="user-plan">Free plan</div>
+      </div>
+    </a>
+  </div>
+</aside>
 
-  <div class="main" id="main">
-
-    <div class="topbar">
-      <div class="tb-left">
-        <!-- ── SIDEBAR TOGGLE — always visible, works like Claude/ChatGPT ── -->
-        <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
-          <svg viewBox="0 0 24 24">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-        <div>
-          <div class="tb-title">Today's feed</div>
-          <div class="tb-date" id="tb-date"></div>
-        </div>
-      </div>
-      <div class="tb-right">
-        <div class="ftabs">
-          <button class="ftab active" onclick="setFilter('all',this)">All</button>
-          <button class="ftab" onclick="setFilter('paper',this)">Papers</button>
-          <button class="ftab" onclick="setFilter('news',this)">News</button>
-          <button class="ftab" onclick="setFilter('model',this)">Models</button>
-        </div>
-        <button class="btn-refresh" onclick="loadFeed()">
-          <svg viewBox="0 0 24 24">
-            <polyline points="23 4 23 10 17 10" />
-            <polyline points="1 20 1 14 7 14" />
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
-          Refresh
-        </button>
-      </div>
-    </div>
-
-    <div class="stats">
-      <div class="sc">
-        <div class="sc-n" id="s-new">—</div>
-        <div class="sc-l">New today</div>
-      </div>
-      <div class="sc">
-        <div class="sc-n" id="s-peel">—</div>
-        <div class="sc-l">Peeled papers</div>
-      </div>
-      <div class="sc">
-        <div class="sc-n" id="s-save">—</div>
-        <div class="sc-l">Saved</div>
-      </div>
-    </div>
-
-    <div class="up-banner" id="up-banner" style="display:none">
-      <div class="up-txt"><strong>Upgrade to Pro</strong> — unlimited Paper Peeler, WhatsApp alerts, instant
-        notifications.</div>
-      <button class="btn-up" onclick="window.location.href='settings.html'">Upgrade — $9/mo</button>
-    </div>
-
-    <div class="feed" id="feed">
-      <div class="sk">
-        <div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div>
-        <div class="skl" style="width:85%"></div>
-        <div class="skl" style="width:70%;margin-bottom:12px"></div>
-        <div class="skl" style="width:95%;height:10px"></div>
-      </div>
-      <div class="sk">
-        <div class="skl" style="width:25%;height:10px;margin-bottom:12px"></div>
-        <div class="skl" style="width:90%"></div>
-        <div class="skl" style="width:62%;margin-bottom:12px"></div>
-        <div class="skl" style="width:88%;height:10px"></div>
-      </div>
-      <div class="sk">
-        <div class="skl" style="width:28%;height:10px;margin-bottom:12px"></div>
-        <div class="skl" style="width:78%"></div>
-        <div class="skl" style="width:66%;margin-bottom:12px"></div>
-        <div class="skl" style="width:92%;height:10px"></div>
-      </div>
+<main class="main" id="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <div class="topbar-status">
+      <div class="status-pill">Live · all systems</div>
     </div>
   </div>
 
-  <script>
-    const SUPABASE_URL = 'https://vsrtfsietsbvvucbwzkr.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
-    let sb
-    try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) } catch (e) { console.warn('Supabase SDK not loaded') }
+  <section class="hero">
+    <div class="hero-eyebrow">Welcome back</div>
+    <h1 class="hero-title" id="hero-title">&nbsp;</h1>
+    <p class="hero-sub">Two tools, one workflow — track every new paper, model, and lab release with Research Radar, then peel the ones that matter with Paper Peeler.</p>
+  </section>
 
-    let allItems = [], curFilter = 'all'
+  <section class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="stat-peels">—</div><div class="stat-label">Peels remaining</div><div class="stat-sub">this 7-day period</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-chats">—</div><div class="stat-label">Chats remaining</div><div class="stat-sub">this 7-day period</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-scanned">—</div><div class="stat-label">Scanned today</div><div class="stat-sub">via Research Radar</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-signal">—</div><div class="stat-label">High-signal items</div><div class="stat-sub">across all sources</div></div>
+  </section>
 
-    // ── Feed data (Phase 3: replaced by real API) ──
-    const FEED = [
-      { id: 1, type: 'paper', src: 'arXiv', time: '2h ago', title: 'Scaling language model reasoning with chain-of-thought distillation', sum: 'Proposes a distillation framework that transfers chain-of-thought reasoning from large models to smaller ones without quality loss. The 7B student matches 70B teacher on GSM8K at 9.8× faster inference.', topics: ['LLMs', 'Reasoning'], diff: 'intermediate', peeler: true },
-      { id: 2, type: 'news', src: 'Google DeepMind', time: '4h ago', title: 'Gemini 2.5 Pro achieves new state-of-the-art on math benchmarks', sum: 'Google announces improvements in mathematical reasoning, surpassing previous models on MATH-500 and AIME by wide margins.', topics: ['News', 'LLMs'], diff: null, peeler: false },
-      { id: 3, type: 'paper', src: 'arXiv', time: '5h ago', title: 'DiffusionDet v2: Real-time object detection via diffusion models', sum: 'Introduces a faster inference pipeline for detection tasks using denoising diffusion, achieving 42 FPS on standard hardware while maintaining SOTA accuracy on COCO.', topics: ['Computer Vision', 'Diffusion'], diff: 'advanced', peeler: true },
-      { id: 4, type: 'model', src: 'HuggingFace', time: '6h ago', title: 'Mistral Small 3.1 released — 24B parameters, 128k context window', sum: 'Mistral releases updated small model with expanded context window and improved instruction following. Apache 2.0 license.', topics: ['Models', 'Open Source'], diff: null, peeler: false },
-      { id: 5, type: 'paper', src: 'arXiv', time: '8h ago', title: 'RLVR: Reinforcement learning from verifiable rewards for complex reasoning', sum: 'A new RL framework where rewards come from verifiable outcomes rather than human feedback. Strong results on math, code, and logical reasoning without reward hacking.', topics: ['RL', 'Reasoning'], diff: 'advanced', peeler: true },
-      { id: 6, type: 'news', src: 'OpenAI', time: '10h ago', title: 'GPT-4o achieves top scores on agentic coding benchmarks', sum: 'OpenAI publishes new evaluation results showing GPT-4o leading on SWE-bench Verified. New tool use capabilities detailed in technical report.', topics: ['News', 'Agents'], diff: null, peeler: false },
-      { id: 7, type: 'paper', src: 'Semantic Scholar', time: '12h ago', title: 'MoE-LLaVA: Mixture of experts for large vision-language models', sum: 'Applies mixture-of-experts to multimodal models, dramatically reducing computational cost while maintaining performance on visual question answering benchmarks.', topics: ['Computer Vision', 'LLMs', 'Multimodal'], diff: 'intermediate', peeler: true },
-      { id: 8, type: 'model', src: 'Meta AI', time: '14h ago', title: 'Llama 4 Scout — 17B active parameters from 109B total with MoE', sum: 'Meta releases Llama 4 Scout using mixture-of-experts. Only 17B parameters active per forward pass. Outperforms previous generation on most benchmarks.', topics: ['Models', 'LLMs'], diff: null, peeler: false },
-    ]
-
-    // ── Auth + init ──
-    async function init() {
-      document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-
-      // Restore sidebar state from localStorage
-      const saved = localStorage.getItem('pl_sb')
-      if (saved === 'closed') {
-        document.getElementById('sidebar').classList.add('closed')
-        document.getElementById('main').classList.add('wide')
-      }
-
-      if (!sb) { loadFeed(); return }
-      try {
-        const { data: { session } } = await sb.auth.getSession()
-        if (!session) { window.location.href = 'login.html'; return }
-        const u = session.user
-        const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0]
-        const ini = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-        const plan = u.user_metadata?.plan || 'free'
-        document.getElementById('uav').textContent = ini
-        document.getElementById('uname').textContent = name
-        document.getElementById('uplan').textContent = plan === 'pro' ? 'Pro plan' : 'Free plan'
-        if (plan === 'free') document.getElementById('up-banner').style.display = 'flex'
-      } catch (e) { }
-      loadFeed()
-    }
-
-    // ── SIDEBAR TOGGLE — exactly like Claude/ChatGPT ──
-    // One ☰ button in topbar. Click toggles sidebar open/closed.
-    function toggleSidebar() {
-      const isMob = window.innerWidth <= 768
-      if (isMob) {
-        // Mobile: slide over with backdrop
-        const mob = document.getElementById('sidebar').classList.contains('mob-open')
-        document.getElementById('sidebar').classList.toggle('mob-open')
-        document.getElementById('mob-overlay').classList.toggle('show', !mob)
-      } else {
-        // Desktop: slide sidebar left, expand main content
-        const sidebar = document.getElementById('sidebar')
-        const main = document.getElementById('main')
-        const isOpen = !sidebar.classList.contains('closed')
-        if (isOpen) {
-          sidebar.classList.add('closed')
-          main.classList.add('wide')
-          localStorage.setItem('pl_sb', 'closed')
-        } else {
-          sidebar.classList.remove('closed')
-          main.classList.remove('wide')
-          localStorage.setItem('pl_sb', 'open')
-        }
-      }
-    }
-
-    function closeMob() {
-      document.getElementById('sidebar').classList.remove('mob-open')
-      document.getElementById('mob-overlay').classList.remove('show')
-    }
-
-    // ── Feed ──
-    function loadFeed() {
-      setTimeout(() => {
-        document.querySelectorAll('.sk').forEach(s => s.remove())
-        allItems = FEED
-        renderFeed(allItems)
-        document.getElementById('s-new').textContent = FEED.length
-        document.getElementById('s-peel').textContent = FEED.filter(i => i.peeler).length
-        document.getElementById('s-save').textContent = '3'
-        document.getElementById('feed-cnt').textContent = FEED.length
-      }, 900)
-    }
-
-    function renderFeed(items) {
-      const f = document.getElementById('feed')
-      f.querySelectorAll('.pc,.empty').forEach(c => c.remove())
-      if (!items.length) {
-        const e = document.createElement('div'); e.className = 'empty'
-        e.style.cssText = 'text-align:center;padding:48px;color:var(--faint);font-size:13px'
-        e.textContent = 'Nothing here — try a different filter'; f.appendChild(e); return
-      }
-      items.forEach((item, i) => {
-        const c = document.createElement('div'); c.className = 'pc'; c.style.animationDelay = `${i * 0.05}s`
-        const dc = item.diff === 'easy' ? 'd-e' : item.diff === 'advanced' ? 'd-h' : 'd-m'
-        c.innerHTML = `
-      <div class="cm">
-        <span class="src">${item.src}</span>
-        <span class="time">${item.time}</span>
-        ${item.peeler ? '<span class="pb">Paper Peeler</span>' : `<span class="tb2">${item.type === 'model' ? 'Model release' : 'News'}</span>`}
+  <section class="features-grid">
+    <div class="feature-card" onclick="goTo('peeler.html')">
+      <div class="feat-head">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="feat-head-text">
+          <h3 class="feat-title">Paper Peeler</h3>
+          <div class="feat-tagline">Multi-agent paper analysis</div>
+        </div>
       </div>
-      <div class="ct">${item.title}</div>
-      <div class="cs">${item.sum}</div>
-      <div class="cf">
-        ${item.topics.map(t => `<span class="tp">${t}</span>`).join('')}
-        ${item.diff ? `<span class="tp ${dc}">${item.diff[0].toUpperCase() + item.diff.slice(1)}</span>` : ''}
-        <div class="ca">${item.peeler ? 'Peel this paper →' : 'Read more →'}</div>
-      </div>`
-        c.onclick = () => { if (item.peeler) window.location.href = `peeler.html?id=${item.id}` }
-        f.appendChild(c)
-      })
-    }
+      <p class="feat-desc">Upload any AI/ML paper or paste an arXiv link. Three specialized agents work in parallel to extract architecture, walk through the math, and explain every concept in plain language.</p>
+      <ul class="feat-bullets">
+        <li>Full walkthrough · architecture canvas · math peel</li>
+        <li>Cached peels cost zero credits</li>
+        <li>Conversational chat grounded in the paper</li>
+      </ul>
+      <span class="feat-cta">Open Paper Peeler<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+    </div>
 
-    function setFilter(f, btn) {
-      curFilter = f
-      document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'))
-      btn.classList.add('active')
-      renderFeed(f === 'all' ? allItems : allItems.filter(i => i.type === f))
-    }
+    <div class="feature-card" onclick="goTo('radar.html')">
+      <div class="feat-head">
+        <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+        <div class="feat-head-text">
+          <h3 class="feat-title">Research Radar</h3>
+          <div class="feat-tagline">Importance-first AI/ML intelligence</div>
+        </div>
+      </div>
+      <p class="feat-desc">A community-curated stream of every new paper, model, and lab release. Rate items that matter, surface what the field is talking about, route important ones straight into Paper Peeler.</p>
+      <ul class="feat-bullets">
+        <li>arXiv · HuggingFace · OpenAI · DeepMind · Anthropic · Meta</li>
+        <li>5-star community ratings re-rank the feed</li>
+        <li>Save · brief · daily digest by email</li>
+      </ul>
+      <span class="feat-cta">Open Research Radar<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+    </div>
+  </section>
 
-    function filterTopic(topic, el) {
-      renderFeed(allItems.filter(i => i.topics.some(t => t.includes(topic))))
-      document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('active'))
-      el.classList.add('active')
-    }
+  <section class="activity-section">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Recent peels</div><a class="panel-link" href="peeler.html">View all →</a></div>
+      <div id="recent-peels"><div class="empty-state">No recent peels yet — open Paper Peeler to start.</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Saved items</div><a class="panel-link" href="radar.html#saved">View all →</a></div>
+      <div id="recent-saved"><div class="empty-state">No saved items yet.</div></div>
+    </div>
+  </section>
+</main>
 
-    init()
-  </script>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+const SUPABASE_URL = 'https://tzzleyysodusezlpttcl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6emxleXlzb2R1c2V6bHB0dGNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3ODM3NDYsImV4cCI6MjA5NTM1OTc0Nn0.JuKKiPc1j-XM3Clj6P-eqYUHNP6ek3BZXCOWjIdvG6Q';
+let sb = null;
+try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){}
+let authToken = null;
+const $ = q => document.querySelector(q);
+function goTo(url){ window.location.href = url; }
+function toggleSidebar(){
+  const s = $('#sidebar');
+  if(window.innerWidth <= 900) s.classList.toggle('open');
+  else s.classList.toggle('closed');
+}
+
+async function initAuth(){
+  const isDemo = localStorage.getItem('pl_demo') === 'true';
+  const stored = localStorage.getItem('pl_user');
+  if(isDemo && stored){
+    const u = JSON.parse(stored);
+    setUserChip(u.name || 'Demo User', u.email, u.plan || 'free');
+    return { sub: u.id, email: u.email, plan: u.plan || 'free', demo: true };
+  }
+  if(sb){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(session?.user){
+        authToken = session.access_token;
+        const u = session.user;
+        const name = u.user_metadata?.name || u.email?.split('@')[0] || 'User';
+        setUserChip(name, u.email, 'free');
+        return { sub: u.id, email: u.email, plan: 'free' };
+      }
+    }catch(e){}
+  }
+  return null;
+}
+function setUserChip(name, email, plan){
+  $('#user-name').textContent = name || 'User';
+  $('#user-plan').textContent = plan === 'pro' ? 'Pro plan' : plan === 'team' ? 'Team plan' : 'Free plan';
+  $('#user-avatar').textContent = (name || 'U').charAt(0).toUpperCase();
+}
+
+/* ── Typewriter ── */
+function typewriter(el, text, speed=42){
+  el.textContent = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor'; el.appendChild(cursor);
+  let i = 0;
+  const tick = setInterval(()=>{
+    if(i < text.length){
+      el.insertBefore(document.createTextNode(text[i]), cursor);
+      i++;
+    } else { clearInterval(tick); setTimeout(()=> cursor.remove(), 2200); }
+  }, speed);
+}
+
+/* ── Count-up (setInterval — works in backgrounded tabs) ── */
+function animateCount(el, target, duration=950){
+  if(!el || typeof target !== 'number') return;
+  const FRAMES = 28;
+  const stepMs = duration / FRAMES;
+  let frame = 0;
+  el.textContent = '0';
+  const handle = setInterval(()=>{
+    frame++;
+    const p = Math.min(frame / FRAMES, 1);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(eased * target);
+    if(frame >= FRAMES){ clearInterval(handle); el.textContent = String(target); }
+  }, stepMs);
+}
+
+async function loadStats(user){
+  try{
+    const r = await fetch(API_BASE + '/api/radar/stats');
+    if(r.ok){
+      const s = await r.json();
+      animateCount($('#stat-scanned'), s.scanned_today || 0);
+      animateCount($('#stat-signal'), s.high_signal || 0);
+    }
+  }catch(e){}
+  if(user?.demo){
+    animateCount($('#stat-peels'), 3);
+    animateCount($('#stat-chats'), 20);
+  } else if(authToken){
+    try{
+      const r = await fetch(API_BASE + '/api/peeler/usage', { headers:{ 'Authorization':`Bearer ${authToken}` } });
+      if(r.ok){
+        const u = await r.json();
+        animateCount($('#stat-peels'), u.peel_credits_remaining ?? 3);
+        animateCount($('#stat-chats'), u.chat_credits_remaining ?? 20);
+      } else { animateCount($('#stat-peels'), 3); animateCount($('#stat-chats'), 20); }
+    }catch(e){ animateCount($('#stat-peels'), 3); animateCount($('#stat-chats'), 20); }
+  } else { animateCount($('#stat-peels'), 3); animateCount($('#stat-chats'), 20); }
+}
+
+async function loadActivity(user){
+  if(user?.demo){
+    $('#recent-peels').innerHTML = `
+      <div class="activity-item" onclick="goTo('peeler.html')">
+        <div class="act-dot"></div>
+        <div class="act-content"><div class="act-title">Attention Is All You Need</div><div class="act-meta">Vaswani et al. · cached · 0 credits</div></div>
+      </div>
+      <div class="activity-item" onclick="goTo('peeler.html')">
+        <div class="act-dot"></div>
+        <div class="act-content"><div class="act-title">BERT: Pre-training Deep Bidirectional Transformers</div><div class="act-meta">Devlin et al. · cached · 0 credits</div></div>
+      </div>`;
+    return;
+  }
+  try{
+    const headers = authToken ? { 'Authorization':`Bearer ${authToken}` } : {};
+    const r = await fetch(API_BASE + '/api/peeler/threads', { headers });
+    if(r.ok){
+      const data = await r.json();
+      const threads = (data.threads || []).slice(0, 4);
+      if(threads.length){
+        $('#recent-peels').innerHTML = threads.map(t => `
+          <div class="activity-item" onclick="goTo('peeler.html')">
+            <div class="act-dot"></div>
+            <div class="act-content"><div class="act-title">${escapeHtml(t.title || 'Untitled paper')}</div><div class="act-meta">${timeAgo(t.created_at)}</div></div>
+          </div>`).join('');
+      }
+    }
+  }catch(e){}
+  try{
+    const headers = authToken ? { 'Authorization':`Bearer ${authToken}` } : {};
+    const r = await fetch(API_BASE + '/api/radar/saved', { headers });
+    if(r.ok){
+      const data = await r.json();
+      const items = (data.items || []).slice(0, 4);
+      if(items.length){
+        $('#recent-saved').innerHTML = items.map(item => `
+          <div class="activity-item" onclick="window.open('${escapeHtml(item.source_url||'#')}', '_blank')">
+            <div class="act-dot gold"></div>
+            <div class="act-content"><div class="act-title">${escapeHtml(item.title)}</div><div class="act-meta">${escapeHtml(item.source_name||'')} · ${timeAgo(item.saved_at)}</div></div>
+          </div>`).join('');
+      }
+    }
+  }catch(e){}
+}
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function timeAgo(ts){
+  if(!ts) return 'recently';
+  try{
+    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if(diff < 60) return 'just now';
+    if(diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }catch(e){ return 'recently'; }
+}
+
+/* ═══════════════════════════════════════════
+   THREE.JS — FLOWING WIREFRAME RIBBON
+   A single elegant helix-tube ribbon that flows
+   slowly through space. Represents the continuous
+   stream of AI research through PaperLens.
+   Premium, abstract, unique. Single subject.
+   ═══════════════════════════════════════════ */
+async function initBg(){
+  try{
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js');
+    const canvas = $('#dashCanvas');
+    if(!canvas) return;
+    const W = ()=>window.innerWidth, H = ()=>window.innerHeight;
+
+    const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(W(), H(), false);
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(48, W()/H(), 0.1, 200);
+    camera.position.set(0, 0, 18);
+    camera.lookAt(0, 0, 0);
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    // ── 1. Flowing ribbon (helix tube) — primary subject ──
+    class HelixCurve extends THREE.Curve {
+      constructor(scale=4){ super(); this.scale = scale; }
+      getPoint(t, target = new THREE.Vector3()){
+        const angle = t * Math.PI * 4;
+        const x = Math.cos(angle) * this.scale;
+        const y = (t - 0.5) * this.scale * 2.6;
+        const z = Math.sin(angle) * this.scale;
+        return target.set(x, y, z);
+      }
+    }
+    const path = new HelixCurve(3.6);
+    const tubeGeo = new THREE.TubeGeometry(path, 220, 0.42, 6, false);
+    const tubeWire = new THREE.WireframeGeometry(tubeGeo);
+    const tubeMat = new THREE.LineBasicMaterial({ color: 0xa8c4f0, transparent: true, opacity: 0.22 });
+    const ribbon = new THREE.LineSegments(tubeWire, tubeMat);
+    root.add(ribbon);
+
+    // ── 2. Secondary ribbon (cream, sparser, offset) ──
+    class HelixCurve2 extends THREE.Curve {
+      getPoint(t, target = new THREE.Vector3()){
+        const angle = t * Math.PI * 3 + Math.PI;
+        const r = 2.4;
+        return target.set(Math.cos(angle) * r, (t - 0.5) * 4.2, Math.sin(angle) * r);
+      }
+    }
+    const path2 = new HelixCurve2();
+    const tubeGeo2 = new THREE.TubeGeometry(path2, 140, 0.22, 5, false);
+    const tubeWire2 = new THREE.WireframeGeometry(tubeGeo2);
+    const tubeMat2 = new THREE.LineBasicMaterial({ color: 0xf5e6cc, transparent: true, opacity: 0.18 });
+    const ribbon2 = new THREE.LineSegments(tubeWire2, tubeMat2);
+    root.add(ribbon2);
+
+    // ── 3. Particle field around the ribbons ──
+    const PC = 200;
+    const partGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(PC * 3);
+    for(let i = 0; i < PC; i++){
+      const r = 6 + Math.random() * 10;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = (Math.random() - 0.5) * Math.PI * 0.9;
+      positions[i*3]     = Math.cos(theta) * r * Math.cos(phi);
+      positions[i*3 + 1] = Math.sin(phi) * r;
+      positions[i*3 + 2] = Math.sin(theta) * r * Math.cos(phi);
+    }
+    partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particles = new THREE.Points(partGeo, new THREE.PointsMaterial({
+      color: 0xa8c4f0, size: 1.3, transparent: true, opacity: 0.45, sizeAttenuation: false
+    }));
+    root.add(particles);
+
+    // ── 4. Sparse cream accent particles ──
+    const AC = 35;
+    const accentGeo = new THREE.BufferGeometry();
+    const accentPos = new Float32Array(AC * 3);
+    for(let i = 0; i < AC; i++){
+      const r = 7 + Math.random() * 9;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = (Math.random() - 0.5) * Math.PI * 0.8;
+      accentPos[i*3]     = Math.cos(theta) * r * Math.cos(phi);
+      accentPos[i*3 + 1] = Math.sin(phi) * r;
+      accentPos[i*3 + 2] = Math.sin(theta) * r * Math.cos(phi);
+    }
+    accentGeo.setAttribute('position', new THREE.BufferAttribute(accentPos, 3));
+    const accents = new THREE.Points(accentGeo, new THREE.PointsMaterial({
+      color: 0xf5e6cc, size: 1.1, transparent: true, opacity: 0.5, sizeAttenuation: false
+    }));
+    root.add(accents);
+
+    function onResize(){
+      renderer.setSize(W(), H(), false);
+      camera.aspect = W() / H();
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', onResize);
+
+    let t0 = performance.now();
+    function tick(now){
+      const t = (now - t0) / 1000;
+
+      // Slow rotation — meditative
+      ribbon.rotation.y = t * 0.08;
+      ribbon.rotation.x = Math.sin(t * 0.15) * 0.12;
+      ribbon2.rotation.y = -t * 0.06;
+      ribbon2.rotation.x = Math.cos(t * 0.12) * 0.1;
+
+      // Counter-rotating particles
+      particles.rotation.y = -t * 0.022;
+      accents.rotation.y = t * 0.018;
+
+      // Subtle breathing opacity
+      tubeMat.opacity = 0.2 + Math.sin(t * 0.45) * 0.04;
+      tubeMat2.opacity = 0.16 + Math.cos(t * 0.55) * 0.04;
+
+      // Camera parallax
+      camera.position.x = Math.sin(t * 0.1) * 0.7;
+      camera.position.y = Math.cos(t * 0.08) * 0.5;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    setTimeout(()=> canvas.classList.add('ready'), 100);
+  }catch(e){
+    console.warn('3D bg failed', e);
+    $('#dashCanvas').style.display = 'none';
+  }
+}
+
+(async function init(){
+  const user = await initAuth();
+  await loadStats(user);
+  await loadActivity(user);
+  setTimeout(()=> typewriter($('#hero-title'), 'Your research command center', 42), 360);
+  setTimeout(initBg, 250);
+})();
+</script>
 </body>
-
 </html>

@@ -132,27 +132,34 @@ code, kbd { font-family: var(--mono); }
 /* ── 6. Sidebar ──────────────────────────────── */
 .history-sidebar {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 12px;
+  left: 12px;
   width: var(--sidebar-w);
-  height: 100vh;
-  background: var(--s1);
-  border-right: 1px solid var(--border);
+  height: calc(100vh - 24px);
+  background: rgba(17, 17, 19, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   z-index: 50;
   transition: transform var(--transition-normal);
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .history-sidebar.closed {
-  transform: translateX(calc(-1 * var(--sidebar-w)));
+  transform: translateX(calc(-1 * var(--sidebar-w) - 30px));
 }
 
 .hs-head {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sb-logo {
@@ -189,6 +196,54 @@ code, kbd { font-family: var(--mono); }
 .sb-nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
 .sb-nav-item:hover { background: var(--s2); color: var(--text); }
 .sb-nav-item.active { background: rgba(168,196,240,0.08); color: var(--g1); }
+
+/* Glassmorphism Settings Card in Sidebar Bottom */
+.sb-bottom {
+  padding: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.user-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(168, 196, 240, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+.uav {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--g1), var(--g2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+}
+.uinfo { min-width: 0; flex: 1; }
+.uname { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uplan { font-size: 10.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .hs-divider {
   height: 1px;
@@ -241,7 +296,7 @@ code, kbd { font-family: var(--mono); }
 .main {
   position: fixed;
   top: 0;
-  left: var(--sidebar-w);
+  left: calc(var(--sidebar-w) + 24px);
   right: 0;
   bottom: 0;
   display: flex;
@@ -259,9 +314,16 @@ code, kbd { font-family: var(--mono); }
   align-items: center;
   justify-content: space-between;
   padding: 0 16px 0 14px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(9,9,11,0.88);
-  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(168,196,240,0.10);
+  /* Stronger glassmorphism: translucent, deep blur, soft inner highlight + outer glow */
+  background:
+    linear-gradient(180deg, rgba(168,196,240,0.05) 0%, rgba(9,9,11,0.45) 100%),
+    rgba(9,9,11,0.42);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 8px 24px -16px rgba(0,0,0,0.55);
   flex-shrink: 0;
   position: relative;
   z-index: 20;
@@ -1383,26 +1445,8 @@ code, kbd { font-family: var(--mono); }
   margin-bottom: 10px;
   letter-spacing: -0.1px;
 }
-#flowSteps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  list-style: none;
-}
-#flowSteps li {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--faint);
-  padding: 3px 9px;
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
-}
-#flowSteps li span { font-size: 9px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
-#flowSteps li.active { color: var(--text); border-color: rgba(168,196,240,0.28); background: rgba(168,196,240,0.04); }
-#flowSteps li.active span { color: var(--g1); }
+/* (legacy #flowSteps chip styles removed — the data-flow list now uses the
+   .tutor-arch-flow-steps timeline design defined later in this file) */
 
 /* ── 16. Math Tab ────────────────────────────── */
 .math-locked,
@@ -1833,7 +1877,7 @@ code, kbd { font-family: var(--mono); }
 @media (max-width: 768px) {
   :root { --topbar-h: 48px; }
 
-  .history-sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .history-sidebar { transform: translateX(calc(-1 * var(--sidebar-w) - 30px)); }
   .history-sidebar:not(.closed) { transform: translateX(0); }
   .main { left: 0 !important; }
 
@@ -1946,7 +1990,7 @@ code, kbd { font-family: var(--mono); }
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
   scroll-behavior: smooth;
-  scroll-snap-type: y proximity;
+  position: relative;
 }
 .tutor-flow::-webkit-scrollbar { width: 6px; }
 .tutor-flow::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
@@ -1957,9 +2001,22 @@ code, kbd { font-family: var(--mono); }
   max-width: 1080px;
   margin: 0 auto;
   opacity: 1;
-  scroll-snap-align: start;
+  box-sizing: border-box;
+  /* Deck model: every section is its own window — only the active one shows */
+  display: none;
+  min-height: 100%;
 }
+.rs-stage.is-active { display: block; }
+/* Locked sections never show, even if mis-flagged as active */
 .rs-stage[hidden] { display: none; }
+
+/* Top result-hero (title + authors + Intermediate badge) is the walkthrough's
+   header — hide it on Arch/Math/Chat so each window has its own clean header. */
+.screen-result[data-active-stage="architecture"] .result-hero,
+.screen-result[data-active-stage="math"]         .result-hero,
+.screen-result[data-active-stage="chat"]         .result-hero {
+  display: none;
+}
 .rs-stage.is-emerging {
   animation: stage-emerge var(--reveal-fade) var(--ease-tutor) both;
 }
@@ -2014,6 +2071,33 @@ code, kbd { font-family: var(--mono); }
   line-height: 1.55;
   margin-bottom: 36px;
 }
+/* Architecture stage: collapse heavy header chrome but keep a small "02
+   Architecture" label top-left. The diagram + bottom dock own the rest. */
+#stageArchitecture .stage-title,
+#stageArchitecture .stage-subtitle,
+#stageArchitecture .tutor-arch-stage-label { display: none; }
+#stageArchitecture .stage-marker { margin-bottom: 10px; }
+#stageArchitecture .stage-marker-index,
+#stageArchitecture .stage-marker-label { font-size: 11px; }
+#stageArchitecture {
+  padding: 14px clamp(14px, 2vw, 28px) 16px;
+  max-width: none;
+}
+
+/* ── Math stage entrance animation ── */
+@keyframes math-hero-in {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#stageMath .stage-marker {
+  animation: math-hero-in 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s both;
+}
+#stageMath .stage-title {
+  animation: math-hero-in 0.6s cubic-bezier(0.22,1,0.36,1) 0.18s both;
+}
+#stageMath .stage-subtitle {
+  animation: math-hero-in 0.6s cubic-bezier(0.22,1,0.36,1) 0.32s both;
+}
 
 
 /* ─── 23.2 Stage CTA (unlock next stage) ─── */
@@ -2030,6 +2114,34 @@ code, kbd { font-family: var(--mono); }
 .stage-cta-zone.is-ready {
   opacity: 1;
   pointer-events: auto;
+}
+/* Two-beat reveal: promise text fades up first, button slides in after */
+.stage-cta-zone .stage-cta-zone-msg {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 700ms var(--ease-tutor),
+    transform 700ms var(--ease-tutor);
+}
+.stage-cta-zone.is-ready .stage-cta-zone-msg {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stage-cta-zone .stage-cta-btn {
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+  transition:
+    opacity 600ms var(--ease-tutor),
+    transform 600ms var(--ease-tutor);
+}
+.stage-cta-zone.is-buttoned .stage-cta-btn {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: cta-attract 2400ms ease-in-out 700ms infinite;
+}
+@keyframes cta-attract {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168,196,240,0.0); }
+  50%      { box-shadow: 0 0 0 8px rgba(168,196,240,0.08); }
 }
 
 .stage-cta-zone-msg {
@@ -2106,6 +2218,13 @@ code, kbd { font-family: var(--mono); }
     rgba(255,255,255,0.018);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.18);
+  opacity: 0.35;
+  transform: translateY(24px);
+  transition: opacity 800ms var(--ease-tutor), transform 800ms var(--ease-tutor);
+}
+.peel-chapter.is-active {
+  opacity: 1;
+  transform: translateY(0);
 }
 /* Decorative separator dot between chapters */
 .peel-chapter + .peel-chapter::before,
@@ -2204,10 +2323,27 @@ code, kbd { font-family: var(--mono); }
   font-size: clamp(20px, 2.4vw, 26px);
   font-weight: 700;
   letter-spacing: -0.4px;
-  color: var(--text);
+  /* Soft sky → ivory — light tutor-voice that doesn't fight the main title */
+  background: linear-gradient(96deg, #dde7f8 0%, #c6d4f0 55%, #b9c9ec 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   line-height: 1.2;
   flex: 1;
   min-width: 240px;
+}
+/* Lineage block transparency: honest about the source */
+.lineage-eyebrow {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 auto 18px;
+  text-align: center;
+  opacity: 0.7;
 }
 .conf-badge {
   font-size: 10px;
@@ -2223,27 +2359,25 @@ code, kbd { font-family: var(--mono); }
 .conf-badge.conf-low    { background: rgba(192,132,252,0.10); color: var(--g4); border: 1px solid rgba(192,132,252,0.22); }
 
 .peel-chapter-body {
-  font-size: 15.5px;
-  line-height: 1.78;
-  color: rgba(246,247,249,0.82);
-  letter-spacing: -0.1px;
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.85;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.15px;
+  font-weight: 400;
 }
-.peel-chapter-body p { margin-bottom: 1em; }
+.peel-chapter-body p { margin-bottom: 1.1em; }
 .peel-chapter-body p:last-child { margin-bottom: 0; }
 
-/* Streaming text reveal — characters appear as opacity sweeps in */
-.streaming-text > .word {
+/* Streaming text reveal — discrete typewriter-like word beats */
+.streaming-text .word {
   display: inline-block;
   opacity: 0;
-  filter: blur(4px);
-  transform: translateY(2px);
-  transition: opacity 380ms var(--ease-tutor), filter 380ms var(--ease-tutor), transform 380ms var(--ease-tutor);
+  transition: opacity 140ms ease-out;
   margin-right: 0.25em;
 }
-.streaming-text > .word.is-visible {
+.streaming-text .word.is-visible {
   opacity: 1;
-  filter: blur(0);
-  transform: translateY(0);
 }
 .streaming-text .br { display: block; height: 1em; }
 
@@ -2265,40 +2399,138 @@ code, kbd { font-family: var(--mono); }
   letter-spacing: -0.1px;
 }
 
-/* Inter-chapter transition line */
+/* Inter-chapter transition line — must read as a clear beat, not faded text */
 .peel-transition {
+  position: relative;
   text-align: center;
   font-style: italic;
-  color: var(--faint);
-  font-size: 13.5px;
-  margin: 8px 0 56px;
-  letter-spacing: -0.1px;
+  font-weight: 500;
+  color: rgba(246,247,249,0.78);
+  font-size: 15px;
+  margin: 28px auto 56px;
+  padding: 14px 28px;
+  max-width: 640px;
+  letter-spacing: 0.1px;
   opacity: 0;
-  transition: opacity 700ms var(--ease-tutor);
+  transform: translateY(8px);
+  transition:
+    opacity 700ms var(--ease-tutor),
+    transform 700ms var(--ease-tutor);
 }
-.peel-transition.is-visible { opacity: 0.8; }
+/* Subtle gradient hairlines top + bottom so it reads as a section divider */
+.peel-transition::before,
+.peel-transition::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(168,196,240,0.45), transparent);
+  transform: translateX(-50%);
+}
+.peel-transition::before { top: 0; }
+.peel-transition::after  { bottom: 0; }
+.peel-transition.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 
-/* ─── 23.4 Tutor-SVG architecture canvas (Phase 3.3 2-stage) ─── */
+/* ─── 23.4 Tutor-SVG architecture canvas (full-window, inspector overlay) ─── */
 .tutor-arch {
   position: relative;
   padding: 0;
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  grid-template-areas:
-    "label     inspector"
-    "canvas    inspector"
-    "nav       inspector"
-    "peelcta   flow"
-    "backbtn   .";
-  gap: 16px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
-.tutor-arch-stage-label { grid-area: label; }
-.tutor-canvas-wrap      { grid-area: canvas; }
-.arch-nav               { grid-area: nav; }
-.tutor-arch-peel-cta    { grid-area: peelcta; }
-.arch-back-btn          { grid-area: backbtn; }
+/* Canvas-stage: the diagram owns the ENTIRE window. Focused-layer info + step
+   controls dock at the bottom of the canvas. No side panel. */
+.tutor-arch-canvas-stage {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - var(--topbar-h) - 84px);
+}
+
+/* Bottom dock — glass bar pinned to the canvas bottom */
+.arch-dock {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(9,9,16,0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(168,196,240,0.2);
+  box-shadow: 0 12px 36px -18px rgba(0,0,0,0.8);
+}
+.arch-dock-info {
+  flex: 1;
+  min-width: 0;
+}
+.arch-dock-eyebrow {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.arch-dock-title {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+.arch-dock-body {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(246,247,249,0.78);
+  /* Clamp to two lines so the dock never grows tall */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.arch-dock-body::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.16em;
+  background: linear-gradient(180deg, var(--g1), rgba(245,230,204,0.7));
+  animation: arch-cursor 900ms step-end infinite;
+}
+.arch-dock .arch-nav {
+  flex-shrink: 0;
+  margin: 0;
+  opacity: 1;
+  transform: none;
+  animation: none;
+  background: rgba(168,196,240,0.06);
+}
+@media (max-width: 760px) {
+  .arch-dock { flex-direction: column; align-items: stretch; gap: 12px; }
+  .arch-dock .arch-nav { align-self: center; }
+}
+/* Header row: stage-label on left, back button on right (when sub-peeled) */
+.tutor-arch-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .tutor-arch-stage-label {
   display: inline-flex;
   align-items: center;
@@ -2329,45 +2561,55 @@ code, kbd { font-family: var(--mono); }
 .tutor-canvas-wrap {
   position: relative;
   width: 100%;
+  height: 100%;
+  /* Guarantee the SVG always has space — without this, generic blueprints
+     collapse to 0×0 inside the flex column. */
+  min-height: 460px;
+  aspect-ratio: 2.4 / 1;
   border-radius: 18px;
-  /* 3D bg shows through transparent canvas area */
-  background: rgba(8,8,18,0.82);
-  /* OLD background (commented, revert if 3D not desired):
-  background:
-    radial-gradient(ellipse at top, rgba(168,196,240,0.04), transparent 70%),
-    rgba(255,255,255,0.018);
-  */
-  border: 1px solid rgba(255,255,255,0.07);
-  overflow: auto;
-  min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(168,196,240,0.24) transparent;
+  background: rgba(8,8,18,0.92);
+  border: 1px solid rgba(168,196,240,0.14);
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 12px 48px -20px rgba(0,0,0,0.55);
 }
 .tutor-canvas-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
 .tutor-canvas-wrap::-webkit-scrollbar-thumb { background: rgba(168,196,240,0.22); border-radius: 99px; }
 .tutor-canvas-wrap::before {
-  /* subtle paper-grid background */
+  /* Math-paper grid — clearer than dots, less noisy than 3D perspective */
   content: '';
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(168,196,240,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168,196,240,0.03) 1px, transparent 1px);
-  background-size: 32px 32px;
+    linear-gradient(rgba(168,196,240,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,196,240,0.06) 1px, transparent 1px),
+    linear-gradient(rgba(168,196,240,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,196,240,0.025) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.9;
 }
 .tutor-canvas {
-  width: 100%;
-  max-width: 100%;
+  /* Pinned to an explicit box that clears the bottom dock — guarantees the
+     whole diagram is visible (scaled to fit), never clipped behind the dock. */
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  bottom: 138px;
+  width: auto;
   height: auto;
   display: block;
-  position: relative;
   z-index: 1;
 }
+/* Disable the 3D perspective bg specifically on the architecture stage —
+   the math grid above is clearer and doesn't compete with the diagram. */
+#stageArchitecture .stage-bg-3d { display: none; }
 
 .tutor-blueprint-zone {
   opacity: 0;
-  animation: blueprint-zone-in 700ms var(--ease-tutor) forwards;
+  animation: blueprint-zone-in 900ms var(--ease-tutor) forwards;
   animation-delay: var(--zone-delay, 0ms);
 }
 @keyframes blueprint-zone-in {
@@ -2466,8 +2708,9 @@ code, kbd { font-family: var(--mono); }
 
 .tutor-node-label {
   font-family: var(--font);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
   fill: var(--text);
   text-anchor: middle;
   opacity: 0;
@@ -2476,8 +2719,8 @@ code, kbd { font-family: var(--mono); }
 }
 .tutor-node-sublabel {
   font-family: var(--mono);
-  font-size: 11px;
-  fill: var(--faint);
+  font-size: 13px;
+  fill: rgba(245,230,204,0.7);
   text-anchor: middle;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -2492,11 +2735,11 @@ code, kbd { font-family: var(--mono); }
 
 .tutor-edge {
   fill: none;
-  stroke: rgba(168,196,240,0.35);
-  stroke-width: 1.6;
+  stroke: rgba(168,196,240,0.4);
+  stroke-width: 1.8;
   stroke-dasharray: 800;
   stroke-dashoffset: 800;
-  animation: stroke-draw 900ms var(--ease-tutor) forwards;
+  animation: stroke-draw 1400ms var(--ease-tutor) forwards;
   animation-delay: var(--edge-delay, 0ms);
   marker-end: url(#tutor-arrow);
 }
@@ -2540,17 +2783,24 @@ code, kbd { font-family: var(--mono); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Inspector panel — shows currently focused node */
+/* Inspector panel — side-by-side column, full canvas height, no scroll */
 .tutor-arch-inspector {
-  grid-area: inspector;
-  position: sticky;
-  top: 80px;
-  margin-top: 0;
-  padding: 24px;
-  border-radius: 0 14px 14px 14px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.05);
-  overflow: hidden;
+  position: relative;
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: rgba(9,9,16,0.7);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid rgba(168,196,240,0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 10px 32px -20px rgba(0,0,0,0.7);
+  overflow: auto;
+  /* Match the canvas height so the layout reads as a single window */
+  align-self: stretch;
+}
+@media (max-width: 860px) {
+  .tutor-arch-inspector { align-self: auto; }
 }
 .tutor-arch-inspector::before {
   content: '';
@@ -2598,54 +2848,107 @@ code, kbd { font-family: var(--mono); }
   50%      { opacity: 0; }
 }
 
-/* Data flow story */
+/* Data-flow story panel — renamed "How data moves through it" — full-width below inspector */
 .tutor-arch-flow {
-  grid-area: flow;
   margin-top: 0;
-  padding: 24px;
+  padding: 28px 32px 32px;
   border-radius: 14px;
   background: rgba(255,255,255,0.02);
   border: 1px solid var(--border);
 }
 .tutor-arch-flow-title {
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 1.5px;
+  font-size: 14px;
+  color: var(--g1);
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 14px;
-  font-weight: 600;
+  margin-bottom: 24px;
+  font-weight: 700;
 }
+/* Timeline graph: a vertical spine connects numbered step-chips that light up
+   one after another as the reader scrolls. */
 .tutor-arch-flow-steps {
   list-style: none;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
   counter-reset: step;
+  padding-left: 4px;
+}
+/* The spine — a soft gradient line behind the chips (aligned to chip centers) */
+.tutor-arch-flow-steps::before {
+  content: '';
+  position: absolute;
+  left: 40px;
+  top: 22px;
+  bottom: 22px;
+  width: 2px;
+  background: linear-gradient(180deg,
+    rgba(168,196,240,0.05),
+    rgba(168,196,240,0.32) 12%,
+    rgba(168,196,240,0.32) 88%,
+    rgba(168,196,240,0.05));
 }
 .tutor-arch-flow-steps li {
   counter-increment: step;
   position: relative;
-  padding-left: 48px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
   font-size: 14px;
-  color: rgba(246,247,249,0.82);
-  line-height: 1.55;
-  min-height: 22px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.5;
+  /* Each step is a highlighted card so it reads clearly */
+  padding: 13px 20px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(168,196,240,0.22);
+  /* Scroll-driven reveal — slides in from the left, replays each visit */
+  opacity: 0;
+  transform: translateX(-16px);
+  transition:
+    opacity 620ms var(--ease-tutor),
+    transform 620ms var(--ease-tutor),
+    background 400ms var(--ease-tutor),
+    border-color 400ms var(--ease-tutor);
 }
+.tutor-arch-flow-steps li.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+  background: rgba(168,196,240,0.16);
+  border-color: rgba(168,196,240,0.45);
+  box-shadow: inset 3px 0 0 var(--g1), 0 4px 18px -10px rgba(0,0,0,0.6);
+}
+/* Circular number chip sitting on the spine */
 .tutor-arch-flow-steps li::before {
   content: counter(step, decimal-leading-zero);
-  position: absolute;
-  left: 0;
-  top: 2px;
-  width: 32px;
-  text-align: left;
+  flex: 0 0 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--pl-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #ffffff;
+  background: rgba(168,196,240,0.18);
+  border: 1.5px solid rgba(168,196,240,0.5);
+  transition: box-shadow 500ms var(--ease-tutor), border-color 500ms var(--ease-tutor), transform 500ms var(--ease-tutor);
+}
+/* Chip lights up + pulses when its step reveals */
+.tutor-arch-flow-steps li.is-visible::before {
+  border-color: rgba(168,196,240,0.6);
+  box-shadow: 0 0 0 4px rgba(168,196,240,0.08), 0 0 16px rgba(168,196,240,0.25);
+  animation: flow-chip-pop 600ms var(--ease-pop);
+}
+@keyframes flow-chip-pop {
+  0%   { transform: scale(0.6); }
+  55%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
 }
 
 /* Peel-this button (mid-stage) */
@@ -2671,28 +2974,37 @@ code, kbd { font-family: var(--mono); }
 .math-tutor {
   display: flex;
   flex-direction: column;
-  gap: 64px;
+  gap: 0;
 }
+/* One equation fills the screen at a time; scroll down to reveal the next.
+   No scroll-snap — free scrolling so you can always reach the top/bottom. */
 .math-eq-card {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: 24px;
+  min-height: calc(100vh - var(--topbar-h) - 150px);
+  padding: 32px 0;
+}
+.math-eq-card + .math-eq-card {
+  border-top: 1px solid rgba(168,196,240,0.08);
 }
 .math-eq-marker {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--faint);
+  color: rgba(255, 255, 255, 0.7);
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 .math-eq-marker strong {
   color: var(--g1);
   font-weight: 600;
+  text-shadow: 0 0 10px rgba(168, 196, 240, 0.35);
 }
 .math-eq-location {
   font-size: 12px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.85);
   margin-top: 4px;
 }
 
@@ -2705,20 +3017,22 @@ code, kbd { font-family: var(--mono); }
       to bottom,
       transparent 0px,
       transparent 31px,
-      rgba(168,196,240,0.04) 31px,
-      rgba(168,196,240,0.04) 32px
+      rgba(168,196,240,0.02) 31px,
+      rgba(168,196,240,0.02) 32px
     ),
-    rgba(255,255,255,0.012);
-  border: 1px solid rgba(255,255,255,0.05);
+    rgba(9, 9, 11, 0.72);
+  border: 1px solid rgba(168,196,240,0.16);
   overflow: hidden;
   isolation: isolate;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 .math-eq-frame::before {
   content: '';
   position: absolute;
   top: 0; left: 0;
   width: 0; height: 0;
-  border-top: 14px solid rgba(168,196,240,0.35);
+  border-top: 14px solid rgba(168,196,240,0.45);
   border-right: 14px solid transparent;
 }
 
@@ -2730,9 +3044,13 @@ code, kbd { font-family: var(--mono); }
   overflow-x: auto;
   overflow-y: visible;
   padding: 6px 0 10px;
-  -webkit-mask: linear-gradient(90deg, #000 var(--ink-progress, 0%), transparent var(--ink-progress, 0%));
-          mask: linear-gradient(90deg, #000 var(--ink-progress, 0%), transparent var(--ink-progress, 0%));
-  transition: --ink-progress 2s var(--ease-draw);
+  /* Left-to-right "writing" wipe — clip-path is reliably animatable everywhere
+     (no @property needed). Hidden until .is-drawn. */
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 4.6s cubic-bezier(0.33, 0, 0.2, 1);
+}
+.math-eq-render.is-drawn {
+  clip-path: inset(0 0 0 0);
 }
 .math-eq-render .katex-display {
   margin: 0;
@@ -2743,9 +3061,9 @@ code, kbd { font-family: var(--mono); }
 .math-eq-render .katex {
   font-size: min(1.12em, 26px);
   white-space: normal;
-}
-.math-eq-render.is-drawn {
-  --ink-progress: 100%;
+  /* Light, airy equation tone with a faint glow so it reads as "written light" */
+  color: #ffffff;
+  text-shadow: 0 0 18px rgba(168,196,240,0.45);
 }
 
 .math-eq-frame .math-eq-pen {
@@ -2769,6 +3087,9 @@ code, kbd { font-family: var(--mono); }
   opacity: 0;
   transition: opacity 200ms ease, left 2s var(--ease-draw);
 }
+.math-eq-pen {
+  transition: opacity 200ms ease, left 4.6s cubic-bezier(0.33, 0, 0.2, 1);
+}
 .math-eq-pen.is-writing {
   left: calc(100% - 30px);
   opacity: 1;
@@ -2785,8 +3106,10 @@ code, kbd { font-family: var(--mono); }
   position: relative;
   padding: 18px 20px;
   border-radius: 0 10px 10px 10px;
-  background: rgba(255,255,255,0.022);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(9, 9, 11, 0.9);
+  border: 1px solid rgba(168,196,240,0.22);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  backdrop-filter: blur(20px) saturate(130%);
   transition: opacity 600ms var(--ease-tutor), transform 600ms var(--ease-tutor);
   opacity: 0;
   transform: translateY(8px);
@@ -2796,7 +3119,7 @@ code, kbd { font-family: var(--mono); }
   position: absolute;
   top: 0; left: 0;
   width: 0; height: 0;
-  border-top: 9px solid rgba(168,196,240,0.28);
+  border-top: 9px solid rgba(168,196,240,0.38);
   border-right: 9px solid transparent;
 }
 .math-eq-meta > article.is-visible {
@@ -2811,18 +3134,20 @@ code, kbd { font-family: var(--mono); }
   color: var(--g1);
   font-weight: 600;
   margin-bottom: 6px;
-  opacity: 0.85;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(168, 196, 240, 0.25);
 }
 .math-eq-meta p {
   font-size: 13.5px;
   line-height: 1.6;
-  color: rgba(246,247,249,0.82);
+  color: #ffffff;
 }
 
 /* Symbol legend grid */
 .math-eq-symbols {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin-top: 18px;
   opacity: 0;
@@ -2836,8 +3161,10 @@ code, kbd { font-family: var(--mono); }
   gap: 10px;
   padding: 8px 14px;
   border-radius: 99px;
-  background: rgba(168,196,240,0.06);
-  border: 1px solid rgba(168,196,240,0.18);
+  background: rgba(9, 9, 11, 0.85);
+  border: 1px solid rgba(168,196,240,0.25);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 .math-eq-symbol-key {
   font-family: var(--mono);
@@ -2846,10 +3173,11 @@ code, kbd { font-family: var(--mono); }
   font-weight: 600;
   letter-spacing: 0;
   flex-shrink: 0;
+  text-shadow: 0 0 8px rgba(168, 196, 240, 0.35);
 }
 .math-eq-symbol-meaning {
   font-size: 12.5px;
-  color: rgba(246,247,249,0.78);
+  color: rgba(255, 255, 255, 0.95);
   line-height: 1.4;
 }
 
@@ -2885,18 +3213,40 @@ code, kbd { font-family: var(--mono); }
 
 
 /* ─── 23.6 ChatGPT-bare chat (Phase 3.5) ─── */
+#stageChat {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 40px clamp(24px, 5vw, 64px) 24px;
+}
+#stageChat.is-active {
+  display: flex !important;
+  flex-direction: column;
+}
+
 .chat-bare {
   display: flex;
   flex-direction: column;
-  min-height: 60vh;
-  padding-bottom: 80px;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
 }
 
 .chat-bare-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 36px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+/* Hide suggested questions completely once the conversation has started */
+.chat-bare:has(.chat-msg-user) .chat-bare-suggestions,
+.chat-bare:has(.chat-msg-assistant) .chat-bare-suggestions {
+  display: none !important;
 }
 .chat-bare-suggest {
   padding: 10px 16px;
@@ -2921,8 +3271,14 @@ code, kbd { font-family: var(--mono); }
   display: flex;
   flex-direction: column;
   gap: 28px;
-  padding: 12px 0 32px;
+  padding: 12px 0 24px;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.chat-bare-log::-webkit-scrollbar { width: 5px; }
+.chat-bare-log::-webkit-scrollbar-thumb { background: rgba(168, 196, 240, 0.22); border-radius: 99px; }
 
 .chat-msg-user {
   align-self: flex-end;
@@ -3001,13 +3357,12 @@ code, kbd { font-family: var(--mono); }
 
 /* Chat composer at bottom */
 .chat-bare-composer {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
-  padding: 20px 0 4px;
-  background:
-    linear-gradient(to top, var(--bg) 60%, rgba(9,9,11,0.6) 95%, transparent);
+  position: relative;
+  margin-top: 0;
+  padding: 12px 0 4px;
+  background: var(--bg);
   z-index: 2;
+  flex-shrink: 0;
 }
 .chat-bare-composer-inner {
   display: flex;
@@ -3111,7 +3466,7 @@ code, kbd { font-family: var(--mono); }
 /* ─── 23.11 Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
   .rs-stage.is-emerging,
-  .streaming-text > .word,
+  .streaming-text .word,
   .tutor-node-rect,
   .tutor-edge,
   .tutor-node-label,
@@ -3131,7 +3486,7 @@ code, kbd { font-family: var(--mono); }
     filter: none !important;
     stroke-dashoffset: 0 !important;
   }
-  .streaming-text > .word { opacity: 1; filter: none; transform: none; }
+  .streaming-text .word { opacity: 1; filter: none; transform: none; }
   .math-eq-render { -webkit-mask: none; mask: none; }
   .arch-particle { display: none; }
 }
@@ -3154,6 +3509,23 @@ code, kbd { font-family: var(--mono); }
   opacity: 0;
   transform: translateY(6px);
   animation: arch-nav-fade-in 500ms var(--ease-tutor) 900ms forwards;
+}
+/* Floating step nav — anchored bottom-center over the canvas (no longer outside) */
+.arch-nav--floating {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  z-index: 5;
+  background: rgba(9,9,16,0.84);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-color: rgba(168,196,240,0.22);
+  margin: 0;
+}
+.arch-nav--floating { animation: arch-nav-fade-in-float 500ms var(--ease-tutor) 900ms forwards; }
+@keyframes arch-nav-fade-in-float {
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 .arch-nav-btn {
   display: flex;
@@ -3266,13 +3638,43 @@ code, kbd { font-family: var(--mono); }
 /* ─── 27. Section pill navigation (fixed right side) ─── */
 .section-pill-nav {
   position: fixed;
-  right: 20px;
+  right: 0;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateX(calc(100% - 24px)); /* collapsed off-screen showing only a glowing grab bar */
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   z-index: 110;
+  padding: 14px 8px 14px 10px;
+  background: rgba(9, 9, 11, 0.72);
+  border: 1.5px solid rgba(168, 196, 240, 0.28);
+  border-right: none;
+  border-radius: 20px 0 0 20px;
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 
+    -8px 8px 32px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 380ms cubic-bezier(0.25, 1, 0.25, 1), opacity 300ms, border-color 300ms;
+  opacity: 0.8; /* Highly visible by default so users can easily see and click/hover it */
+}
+.section-pill-nav::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 24px;
+  border-left: 2px double rgba(168, 196, 240, 0.85);
+  margin-bottom: 6px;
+  cursor: pointer;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 6px rgba(168, 196, 240, 0.6));
+}
+.section-pill-nav:hover,
+.section-pill-nav.is-expanded {
+  transform: translateY(-50%) translateX(0);
+  opacity: 1;
+  border-color: rgba(168, 196, 240, 0.5);
 }
 .pill-nav-btn {
   display: flex;
@@ -3353,6 +3755,28 @@ code, kbd { font-family: var(--mono); }
 .tutor-arch   { position: relative; z-index: 1; }
 .math-tutor   { position: relative; z-index: 1; }
 
+/* ─── Math stage: own Three.js scene instead of the global particle network ───
+   The CSS 3D backdrop is suppressed; the math-themed WebGL canvas takes over. */
+#stageMath .stage-bg-3d { display: none; }
+
+/* New math 3D canvas — covers the viewport behind everything */
+#mathThreeCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  display: none; /* shown only when the Math window is active (rule below) */
+  opacity: 0.18; /* dimmed so content cards stay readable */
+}
+/* Hide the global citation-network canvas when Math is the active stage,
+   and reveal the math-themed canvas in its place.
+   The !important is required because the citation script sets the canvas
+   display via inline style, which would otherwise beat this rule. */
+body:has(#resultScreen[data-active-stage="math"]) #threeCanvas     { display: none !important; }
+body:has(#resultScreen[data-active-stage="math"]) #mathThreeCanvas { display: block !important; }
+
 /* ─── 29. Chat logo avatar ─── */
 .chat-msg-assistant-avatar.logo-avatar {
   background: linear-gradient(135deg, rgba(168,196,240,0.10), rgba(245,230,204,0.06));
@@ -3380,6 +3804,17 @@ code, kbd { font-family: var(--mono); }
   word-break: break-all;
   text-align: left;
 }
+/* Clean plain-math fallback — reads like math, never like LaTeX source */
+.math-render-plain {
+  display: block;
+  font-family: "KaTeX_Math", Georgia, serif;
+  font-size: 26px;
+  font-style: italic;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: 0.3px;
+  padding: 6px 0;
+}
 
 /* ─── 31. History reference label ─── */
 .lineage-source-ref {
@@ -3394,25 +3829,28 @@ code, kbd { font-family: var(--mono); }
   border: 1px solid rgba(168,196,240,0.14);
 }
 
-/* ─── 32. Responsive overrides for inspector grid ─── */
+/* ─── 32. Responsive overrides ─── */
 @media (max-width: 960px) {
-  .tutor-arch {
-    display: block;
-  }
-  .tutor-arch-inspector {
-    position: static;
-    margin-top: 20px;
-    grid-area: unset;
-  }
-  .tutor-arch-flow {
-    margin-top: 16px;
-    grid-area: unset;
-  }
-  .arch-back-btn {
-    grid-area: unset;
-    margin-bottom: 12px;
-  }
+  /* tutor-arch is now flex-column at all sizes — only the canvas height shrinks */
+  .tutor-canvas-wrap { min-height: 56vh; }
+  .tutor-arch-inspector { padding: 18px 20px; }
+  .tutor-arch-flow { padding: 22px 18px 24px; }
+  /* Deck model: keep section switching reachable on mobile — dock as bottom bar */
   .section-pill-nav {
-    display: none;
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: rgba(9,9,11,0.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
   }
+  /* Leave room so the active window's content never hides behind the bottom bar */
+  .tutor-flow { padding-bottom: 76px; }
 }

@@ -1,0 +1,3011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Research Radar — PaperLens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ═══════════════════════════════════════
+   PaperLens — Research Radar
+   Tokens match Paper Peeler exactly
+   ═══════════════════════════════════════ */
+
+/* ── 1. Tokens ── */
+:root {
+  --bg:  #09090b;
+  --s1:  #111113;
+  --s2:  #17171a;
+  --s3:  #1e1e22;
+  --g1:  #a8c4f0;
+  --g2:  #f5e6cc;
+  --g3:  #4ade80;
+  --g4:  #c084fc;
+  --amber: #facc15;
+  --border:        rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.11);
+  --border-accent: rgba(168,196,240,0.2);
+  --text:  #f6f7f9;
+  --muted: rgba(246,247,249,0.54);
+  --faint: rgba(246,247,249,0.28);
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --sidebar-w: 224px;
+  --topbar-h:  52px;
+  --mob-tabs-h: 56px;
+  --font: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --tf: 140ms ease;
+  --tn: 210ms ease;
+  --ts: 360ms ease;
+}
+
+/* ── 2. Reset ── */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { height:100%; overflow:hidden; }
+body {
+  font-family:var(--font);
+  font-size:14px;
+  line-height:1.6;
+  color:var(--text);
+  background:var(--bg);
+  height:100%;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a { color:inherit; text-decoration:none; }
+button { font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+svg { display:block; }
+[hidden] { display:none !important; }
+::selection { background:rgba(168,196,240,0.22); color:var(--text); }
+
+/* ── Three.js canvases ── */
+#radarSectionCanvas {
+  position:fixed; inset:0; width:100%; height:100%;
+  pointer-events:none; z-index:0; display:none;
+}
+#radarHomeCanvas {
+  position:fixed; inset:0; width:100% !important; height:100% !important;
+  pointer-events:none; z-index:0; display:none;
+  opacity:.72;
+}
+body:has(#app-shell[data-section="home"])      #radarHomeCanvas    { display:block; }
+body:has(#app-shell[data-section="brief"])     #radarSectionCanvas,
+body:has(#app-shell[data-section="papers"])    #radarSectionCanvas,
+body:has(#app-shell[data-section="models"])    #radarSectionCanvas,
+body:has(#app-shell[data-section="companies"]) #radarSectionCanvas,
+body:has(#app-shell[data-section="saved"])     #radarSectionCanvas { display:block; }
+
+/* ── 3. Ambient background (same as Peeler) ── */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(ellipse 900px 500px at 8%  -5%,  rgba(168,196,240,0.055) 0%,transparent 65%),
+    radial-gradient(ellipse 700px 450px at 92% 105%, rgba(245,230,204,0.035) 0%,transparent 65%),
+    radial-gradient(ellipse 500px 300px at 50%  50%, rgba(168,196,240,0.015) 0%,transparent 55%);
+  animation:bg-breathe 24s ease-in-out infinite alternate;
+}
+@keyframes bg-breathe { 0%{opacity:.65} 50%{opacity:1} 100%{opacity:.7} }
+
+/* ── 4. Backdrop glow ── */
+.backdrop-glow {
+  position:fixed; inset:0; pointer-events:none; z-index:1;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(168,196,240,0.03) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(245,230,204,0.025) 0%,transparent 70%);
+}
+
+/* ── 5. Mobile overlay ── */
+.mob-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(9,9,11,0.72); z-index:40;
+  backdrop-filter:blur(4px);
+}
+.mob-overlay.show { display:block; }
+
+/* ── 6. Sidebar ── */
+.sidebar {
+  position:fixed; top:12px; left:12px;
+  width:var(--sidebar-w); height:calc(100vh - 24px);
+  background:rgba(17,17,19,0.82); border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  display:flex; flex-direction:column;
+  z-index:50; transition:transform var(--tn); overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+}
+.sidebar.closed { transform:translateX(calc(-1 * var(--sidebar-w) - 30px)); }
+
+.sb-head {
+  padding:14px 16px; border-bottom:1px solid var(--border);
+  flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+}
+.sb-logo {
+  display:flex; align-items:center; gap:8px;
+  cursor:pointer; user-select:none; transition:opacity var(--tf);
+}
+.sb-logo:hover { opacity:.75; }
+.logo-b { font-size:14px; font-weight:700; color:var(--g1); letter-spacing:-0.3px; }
+.logo-l { font-size:14px; font-weight:700; color:var(--g2); letter-spacing:-0.3px; }
+
+.sb-close-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); display: grid; place-items: center;
+  cursor: pointer; transition: all var(--tf); flex-shrink: 0;
+}
+.sb-close-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.11); background: rgba(255,255,255,0.03); }
+.sb-close-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; }
+
+.sb-nav {
+  padding:10px 10px 0; flex:1;
+  display:flex; flex-direction:column; gap:1px; overflow-y:auto;
+}
+.sb-nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:var(--radius-xs);
+  font-size:13px; color:var(--muted);
+  transition:background var(--tf),color var(--tf);
+}
+.sb-nav-item svg { width:15px; height:15px; flex-shrink:0; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.sb-nav-item:hover { background:var(--s2); color:var(--text); }
+.sb-nav-item.active { background:rgba(168,196,240,0.08); color:var(--g1); }
+
+.sb-divider { height:1px; background:var(--border); margin:8px 0; flex-shrink:0; }
+
+.sb-section-label {
+  font-size:10px; font-weight:700; color:var(--faint);
+  text-transform:uppercase; letter-spacing:0.8px;
+  padding:6px 10px 4px;
+}
+
+.sb-bottom {
+  padding:14px; border-top:1px solid rgba(255,255,255,0.05); margin-top:auto; flex-shrink:0;
+}
+.user-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:12px;
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 4px 30px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  transition:all 0.25s cubic-bezier(0.4,0,0.2,1); text-align:left;
+  width:100%; text-decoration:none; color:inherit; cursor:pointer;
+}
+.user-row:hover {
+  background:rgba(255,255,255,0.08); border-color:rgba(168,196,240,0.3);
+  transform:translateY(-1px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1);
+}
+.uav {
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:#000; flex-shrink:0;
+}
+.uinfo { min-width:0; flex:1; }
+.uname { font-size:12.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.uplan { font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── 7. Main ── */
+.main {
+  position:fixed;
+  top:0; left:calc(var(--sidebar-w) + 24px); right:0; bottom:0;
+  display:flex; flex-direction:column;
+  transition:left var(--tn); z-index:10;
+}
+.sidebar.closed ~ .main { left:0; }
+
+/* ── 8. Topbar ── */
+.topbar {
+  height:var(--topbar-h);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px 0 12px;
+  border-bottom:1px solid rgba(168,196,240,0.10);
+  background:
+    linear-gradient(180deg,rgba(168,196,240,0.05) 0%,rgba(9,9,11,0.45) 100%),
+    rgba(9,9,11,0.42);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  backdrop-filter:blur(22px) saturate(160%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 8px 24px -16px rgba(0,0,0,0.55);
+  flex-shrink:0; position:relative; z-index:20; gap:8px;
+}
+
+.tb-left { display:flex; align-items:center; gap:16px; min-width:0; flex:1; }
+.tb-center { display:none; }
+.tb-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.tb-brand {
+  display:flex; align-items:center; gap:8px;
+  padding-right:14px; margin-right:2px;
+  border-right:1px solid var(--border);
+  height:30px;
+  cursor:pointer;
+}
+.tb-brand:hover .tb-brand-name { color:var(--g1); }
+.tb-brand-icon { width:18px; height:18px; flex-shrink:0; }
+.tb-brand-name {
+  font-size:12.5px; font-weight:600; letter-spacing:-0.2px;
+  color:var(--text); transition:color var(--tf);
+  white-space:nowrap;
+}
+.tb-status-mini {
+  margin-left:auto; padding-right:8px;
+  font-size:11px; color:var(--faint);
+  display:flex; align-items:center; gap:6px;
+}
+.tb-status-mini .status-dot { width:5px; height:5px; }
+
+.sb-toggle {
+  width:32px; height:32px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:var(--radius-xs); color:var(--muted); flex-shrink:0;
+  transition:background var(--tf),color var(--tf);
+}
+.sb-toggle svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; }
+.sb-toggle:hover { background:var(--s2); color:var(--text); }
+
+.tb-title-group { min-width:0; }
+.tb-title { font-size:13.5px; font-weight:600; letter-spacing:-0.2px; white-space:nowrap; }
+.tb-status {
+  display:flex; align-items:center; gap:5px;
+  font-size:10.5px; color:var(--faint);
+}
+.status-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--g3); flex-shrink:0;
+  box-shadow:0 0 6px rgba(74,222,128,0.5);
+  animation:dot-pulse 2.2s ease-in-out infinite;
+}
+@keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ── Section tabs — inline next to logo, underline style ── */
+.section-tabs {
+  display:flex; gap:2px; height:var(--topbar-h);
+  align-items:center;
+}
+.tab-btn {
+  font-size:12.5px; font-weight:500; padding:0 12px;
+  border-radius:0; color:var(--muted);
+  transition:color var(--tf);
+  white-space:nowrap; position:relative;
+  height:100%;
+  display:flex; align-items:center;
+}
+.tab-btn::after {
+  content:''; position:absolute; bottom:0; left:10px; right:10px;
+  height:2px; border-radius:1px 1px 0 0;
+  background:linear-gradient(90deg,var(--g1),var(--g2));
+  transform:scaleX(0); transform-origin:center;
+  transition:transform 180ms ease;
+}
+.tab-btn:hover:not(.active) { color:rgba(246,247,249,0.82); }
+.tab-btn.active { color:var(--text); }
+.tab-btn.active::after { transform:scaleX(1); }
+@media (max-width:1100px) {
+  .tab-btn { padding:0 9px; font-size:12px; }
+  .tb-status-mini { display:none; }
+}
+
+/* Mail button */
+.mail-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 12px; border-radius:var(--radius-xs);
+  border:1px solid var(--border); font-size:11.5px; color:var(--muted);
+  transition:background var(--tf),border-color var(--tf),color var(--tf);
+}
+.mail-btn svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:1.8; }
+.mail-btn:hover { background:var(--s2); border-color:var(--border-strong); color:var(--text); }
+.mail-btn.connected { color:var(--g3); border-color:rgba(74,222,128,0.25); }
+
+/* ── 9. App shell & sections ── */
+.app-shell {
+  flex:1; overflow:hidden; position:relative;
+}
+
+.section {
+  position:absolute; inset:0;
+  overflow-y:auto; overflow-x:hidden;
+  background:transparent;
+  /* Inactive sections disappear instantly — no cross-fade overlap */
+  opacity:0; pointer-events:none; visibility:hidden;
+  transform:translateY(6px);
+  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+}
+.section::-webkit-scrollbar { width:3px; }
+.section::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+
+/* Only the ACTIVE section animates in — outgoing vanishes instantly */
+.app-shell[data-section="home"]      .sec-home,
+.app-shell[data-section="brief"]     .sec-brief,
+.app-shell[data-section="papers"]    .sec-papers,
+.app-shell[data-section="models"]    .sec-models,
+.app-shell[data-section="companies"] .sec-companies,
+.app-shell[data-section="saved"]     .sec-saved {
+  opacity:1; pointer-events:auto; visibility:visible; transform:translateY(0);
+  transition:opacity 200ms ease, transform 200ms ease;
+}
+
+/* ── 10. Radar loading animation ── */
+.radar-loading {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; min-height:360px; gap:28px; padding:48px 24px;
+}
+.radar-visual {
+  position:relative; width:160px; height:160px; flex-shrink:0;
+}
+.radar-circle-wrap {
+  position:absolute; inset:0;
+  border-radius:50%; overflow:hidden;
+}
+.radar-sweep {
+  position:absolute; inset:0; border-radius:50%;
+  background:conic-gradient(
+    from 0deg,
+    transparent 75%,
+    rgba(168,196,240,0.06) 82%,
+    rgba(168,196,240,0.25) 90%,
+    rgba(168,196,240,0.45) 100%
+  );
+  animation:radar-spin 2.4s linear infinite;
+}
+@keyframes radar-spin { to { transform:rotate(360deg); } }
+
+.radar-rings svg {
+  position:absolute; inset:0; width:100%; height:100%;
+}
+.radar-arm {
+  position:absolute; top:50%; left:50%; width:50%; height:1px;
+  background:linear-gradient(90deg,rgba(168,196,240,0.8),rgba(168,196,240,0));
+  transform-origin:left center;
+  animation:radar-arm-spin 2.4s linear infinite;
+}
+@keyframes radar-arm-spin { to { transform:rotate(360deg); } }
+
+.radar-center-dot {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.radar-center-dot::after {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--g1);
+  box-shadow:0 0 12px rgba(168,196,240,0.8);
+  animation:core-pulse 1.8s ease-in-out infinite;
+}
+@keyframes core-pulse { 0%,100%{transform:scale(1);opacity:.8} 50%{transform:scale(1.4);opacity:1} }
+
+.radar-blips { position:absolute; inset:0; }
+.blip {
+  position:absolute; width:5px; height:5px; border-radius:50%;
+  background:var(--g1); opacity:0;
+  box-shadow:0 0 6px rgba(168,196,240,0.7);
+  animation:blip-appear 0.4s ease forwards;
+}
+@keyframes blip-appear { 0%{opacity:0;transform:scale(0)} 60%{opacity:1;transform:scale(1.3)} 100%{opacity:.7;transform:scale(1)} }
+
+.radar-copy { text-align:center; }
+.radar-phase {
+  font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:1.4px; color:var(--g1); margin-bottom:8px;
+}
+.radar-count {
+  font-size:24px; font-weight:700; letter-spacing:-0.8px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.radar-label { font-size:12px; color:var(--muted); margin-top:2px; }
+
+/* ── Section canvas overlay — semi-transparent dark veil so cards stay readable ── */
+.section::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:rgba(9,9,11,0.86);
+}
+/* Home has a much lighter veil so the 3D orrery shines through */
+.sec-home::before { background:rgba(9,9,11,0.30); }
+
+/* ── 11. Home section — premium research desk with 3D background ── */
+.sec-home {
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:0;
+  display:block;
+  height:100%;
+  isolation:isolate;
+}
+.sec-home::after {
+  content:'';
+  position:fixed;
+  inset:var(--topbar-h) 0 0 var(--sidebar-w);
+  pointer-events:none;
+  z-index:0;
+  background:
+    linear-gradient(90deg, rgba(9,9,11,0.88) 0%, rgba(9,9,11,0.28) 52%, rgba(9,9,11,0.55) 100%),
+    radial-gradient(ellipse 900px 560px at 64% 38%, rgba(168,196,240,0.13), transparent 68%),
+    radial-gradient(ellipse 600px 380px at 82% 72%, rgba(245,230,204,0.055), transparent 68%);
+}
+.sidebar.closed ~ .main .sec-home::after { left:0; }
+
+.sec-home > *:not(#radarHomeCanvas), .brief-section > *, .feed-section > *, .saved-section > * {
+  position:relative; z-index:1;
+}
+
+#home-content {
+  min-height:100%;
+  padding:clamp(28px,4vw,54px) clamp(22px,4vw,58px) 34px;
+}
+
+.home-top-split {
+  display:grid;
+  grid-template-columns:minmax(540px, 1.15fr) minmax(360px, 0.85fr);
+  gap:clamp(32px,5vw,84px);
+  align-items:flex-start;
+  max-width:1440px;
+  margin:0 auto;
+  padding-top:14px;
+}
+
+.home-left-hero {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:left;
+  padding:12px 0;
+}
+
+.home-hero-eyebrow {
+  width:max-content;
+  font-size:10px; font-weight:750; letter-spacing:1.8px;
+  text-transform:uppercase;
+  color:rgba(168,196,240,0.86);
+  margin-bottom:14px;
+  padding:6px 10px 6px 24px;
+  border:1px solid rgba(168,196,240,0.18);
+  border-radius:999px;
+  background:rgba(17,17,19,0.46);
+  position:relative;
+  box-shadow:0 10px 32px -24px rgba(168,196,240,0.8);
+}
+.home-hero-eyebrow::before {
+  content:'';
+  position:absolute;
+  left:10px;
+  top:50%;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  transform:translateY(-50%);
+  background:var(--g1);
+  box-shadow:0 0 14px rgba(168,196,240,0.75);
+}
+
+.home-hero-title {
+  font-size:clamp(30px,3.6vw,54px);
+  font-weight:780;
+  letter-spacing:-2.4px;
+  color:var(--text);
+  margin-bottom:14px;
+  line-height:1.06;
+  max-width:680px;
+}
+
+/* Typewriter cursor */
+.home-hero-title .cursor {
+  display:inline-block;
+  width:3px; height:.82em;
+  background:var(--g1);
+  margin-left:3px;
+  vertical-align:text-bottom;
+  border-radius:2px;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.home-hero-sub {
+  font-size:clamp(13.5px,1vw,16px);
+  color:rgba(246,247,249,0.58);
+  margin-bottom:22px;
+  max-width:580px;
+  line-height:1.7;
+}
+
+/* Stagger fade-in for home elements */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.home-hero-eyebrow { animation:fadeSlideUp .55s ease both; }
+.home-hero-title   { animation:fadeSlideUp .55s .1s ease both; }
+.home-hero-sub     { animation:fadeSlideUp .55s .2s ease both; }
+.home-hero-stats   { animation:fadeSlideUp .55s .3s ease both; }
+.section-nav-grid  { animation:fadeSlideUp .55s .4s ease both; }
+
+.home-hero-stats {
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:26px;
+  flex-wrap:wrap;
+}
+
+.hero-stat {
+  display:flex; align-items:baseline; gap:8px;
+  padding:9px 14px; border-radius:99px;
+  background:rgba(17,17,19,0.62);
+  border:1px solid rgba(168,196,240,0.13);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+
+.hero-stat-num {
+  font-size:18px; font-weight:760;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.hero-stat-label { font-size:11px; color:var(--muted); white-space:nowrap; }
+
+.section-nav-grid {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px; max-width:680px;
+}
+
+.snav-card {
+  display:flex; align-items:center; gap:16px;
+  padding:16px 20px; border-radius:14px;
+  background:rgba(17,17,20,0.58);
+  border:1px solid rgba(255,255,255,0.068);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+  cursor:pointer;
+  transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  box-shadow:0 4px 20px -8px rgba(0,0,0,0.6);
+  position:relative; overflow:hidden;
+}
+.snav-card::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(168,196,240,0.06), transparent 60%);
+  opacity:0; transition:opacity .2s ease;
+}
+.snav-card:hover { border-color:rgba(168,196,240,0.26); transform:translateY(-2px); box-shadow:0 8px 32px -12px rgba(168,196,240,0.18); }
+.snav-card:hover::after { opacity:1; }
+
+.snav-card-icon {
+  width:42px; height:42px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(168,196,240,0.07); border:1px solid rgba(168,196,240,0.16);
+  flex-shrink:0;
+}
+
+.snav-card-icon svg { width:18px; height:18px; stroke:var(--g1); fill:none; stroke-width:1.55; stroke-linecap:round; stroke-linejoin:round; }
+
+.snav-card-info {
+  display:flex; flex-direction:column; gap:2px; min-width:0;
+}
+
+.snav-card-label { font-size:14.5px; font-weight:650; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.snav-card-count { font-size:11.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.home-right-radar {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  min-width:0;
+}
+
+.radar-hud-frame {
+  position:relative;
+  width:100%;
+  max-width:460px;
+  min-height:430px;
+  border-radius:22px;
+  padding:22px;
+  background:
+    linear-gradient(180deg,rgba(17,17,19,0.68),rgba(10,10,12,0.42)),
+    radial-gradient(ellipse at 50% 0%, rgba(168,196,240,0.09), transparent 62%);
+  border:1px solid rgba(168,196,240,0.12);
+  -webkit-backdrop-filter:blur(20px) saturate(145%);
+  backdrop-filter:blur(20px) saturate(145%);
+  box-shadow:0 28px 90px -56px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow:hidden;
+}
+
+.radar-hud-frame::before {
+  content:'';
+  position:absolute; inset:18px;
+  border-radius:18px;
+  border:1px solid rgba(168,196,240,0.06);
+  background:
+    linear-gradient(rgba(168,196,240,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,196,240,0.035) 1px, transparent 1px);
+  background-size:38px 38px;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 92%);
+  mask-image:linear-gradient(180deg,#000,transparent 92%);
+  pointer-events:none;
+}
+.radar-hud-frame::after {
+  content:'';
+  position:absolute;
+  width:160px; height:160px;
+  right:-34px; top:-34px;
+  border-radius:50%;
+  border:1px solid rgba(168,196,240,0.12);
+  background:radial-gradient(circle,rgba(168,196,240,0.065),transparent 64%);
+  opacity:.8;
+  pointer-events:none;
+}
+
+.radar-console {
+  position:relative;
+  z-index:1;
+  min-height:386px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:20px;
+}
+.radar-console-kicker {
+  font-size:10px;
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  color:rgba(168,196,240,0.72);
+  font-weight:760;
+}
+.radar-console-title {
+  margin-top:8px;
+  font-size:clamp(18px,1.8vw,26px);
+  font-weight:760;
+  letter-spacing:-0.8px;
+  line-height:1.15;
+  max-width:360px;
+}
+.radar-console-copy {
+  margin-top:10px;
+  font-size:12.5px;
+  line-height:1.7;
+  color:rgba(246,247,249,0.52);
+  max-width:340px;
+}
+.signal-stack {
+  display:grid;
+  gap:10px;
+}
+.signal-row {
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border-radius:13px;
+  background:rgba(9,9,11,0.48);
+  border:1px solid rgba(255,255,255,0.06);
+}
+.signal-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--g1);
+  box-shadow:0 0 14px rgba(168,196,240,0.65);
+  position:relative; flex-shrink:0;
+  animation:pulseDot 2.4s ease infinite;
+}
+.signal-dot::after {
+  content:''; position:absolute; inset:-4px;
+  border-radius:50%; border:1px solid currentColor;
+  opacity:0; animation:ringPulse 2.4s ease infinite;
+}
+@keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:.5} }
+@keyframes ringPulse { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(2.2);opacity:0} }
+.signal-row:nth-child(1) .signal-dot { animation-delay:0s; }
+.signal-row:nth-child(2) .signal-dot { background:var(--g2); box-shadow:0 0 14px rgba(245,230,204,0.5); animation-delay:.8s; }
+.signal-row:nth-child(3) .signal-dot { background:rgba(192,132,252,0.95); box-shadow:0 0 14px rgba(192,132,252,0.42); animation-delay:1.6s; }
+.signal-name { font-size:12px; color:rgba(246,247,249,0.82); font-weight:620; }
+.signal-value { font-size:11px; color:var(--faint); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+.radar-console-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,0.07);
+}
+.radar-console-footer span {
+  font-size:10px;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:var(--faint);
+  font-weight:720;
+}
+.radar-console-btn {
+  padding:9px 13px;
+  border-radius:999px;
+  background:linear-gradient(135deg,rgba(168,196,240,0.95),rgba(245,230,204,0.94));
+  color:#09090b;
+  font-size:12px;
+  font-weight:760;
+}
+
+.hud-corner {
+  position:absolute;
+  font-family:monospace;
+  font-size:7px;
+  color:rgba(168,196,240,0.22);
+  pointer-events:none;
+}
+.hud-corner.tl { top: -14px; left: -14px; }
+.hud-corner.tr { top: -14px; right: -14px; }
+.hud-corner.bl { bottom: -14px; left: -14px; }
+.hud-corner.br { bottom: -14px; right: -14px; }
+
+/* Bottom Half zone (Top highlights) */
+.home-bottom-zone {
+  max-width:1380px;
+  margin:0 auto;
+  padding-top:4px;
+}
+
+.home-cards-header {
+  padding:0 0 12px;
+  display:flex; align-items:baseline; justify-content:space-between;
+  position:relative; flex-shrink:0;
+}
+
+.home-cards-eyebrow {
+  font-size:9.5px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--faint);
+}
+
+.home-cards-action {
+  font-size:11.5px; color:var(--g1);
+  cursor:pointer; transition:opacity var(--tf);
+}
+.home-cards-action:hover { opacity:.7; }
+
+/* Hero cards row — pinned at bottom of single-screen home */
+.hero-cards {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px; padding:0;
+  flex-shrink:0;
+}
+
+.hero-cards .item-card.hero {
+  background:rgba(17,17,19,0.55);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.04);
+  padding:12px 14px;
+  max-height:170px;
+  overflow:hidden;
+  transition:all var(--tf);
+}
+.hero-cards .item-card.hero .card-rating {
+  display:none !important;
+}
+
+.hero-cards .item-card.hero:hover {
+  background:rgba(17,17,19,0.75);
+  border-color:rgba(168,196,240,0.18);
+  transform:translateY(-1px);
+}
+
+.hero-cards .item-card.hero .card-summary { -webkit-line-clamp:2; }
+.hero-cards .item-card.hero .card-why { display:none; }
+.hero-cards .item-card.hero .card-footer .tag-pill:nth-child(n+3) { display:none; }
+
+/* ── 12. Feed container (shared Papers / Models / Companies) ── */
+.feed-section { padding-bottom:80px; }
+
+.feed-header {
+  position:sticky; top:0; z-index:5;
+  background:rgba(9,9,11,0.85); backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border); padding:10px 24px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.feed-title { font-size:13px; font-weight:600; flex-shrink:0; }
+.filter-chips {
+  display:flex; gap:4px; flex-wrap:wrap; flex:1;
+}
+.chip-btn {
+  font-size:11px; font-weight:500; padding:4px 10px;
+  border-radius:99px; border:1px solid var(--border);
+  color:var(--faint); background:transparent;
+  transition:all var(--tf); cursor:pointer;
+}
+.chip-btn:hover { color:var(--text); border-color:var(--border-strong); }
+.chip-btn.active { background:rgba(168,196,240,0.12); color:var(--g1); border-color:rgba(168,196,240,0.3); }
+
+.sort-toggle {
+  display:flex; gap:2px;
+  background:var(--s2); border:1px solid var(--border);
+  border-radius:var(--radius-xs); padding:2px; flex-shrink:0;
+}
+.sort-btn {
+  font-size:11px; padding:3px 9px; border-radius:4px;
+  color:var(--muted); transition:all var(--tf);
+}
+.sort-btn.active { background:rgba(168,196,240,0.12); color:var(--g1); }
+
+.feed-list { display:flex; flex-direction:column; gap:10px; padding:14px 24px; }
+
+.load-more-btn {
+  display:flex; align-items:center; gap:6px; justify-content:center;
+  margin:8px 24px 0; padding:10px;
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  font-size:12.5px; color:var(--muted);
+  background:transparent; cursor:pointer;
+  transition:all var(--tf);
+}
+.load-more-btn:hover { background:var(--s2); color:var(--text); border-color:var(--border-strong); }
+.load-more-btn svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+
+/* ── 13. Brief section ── */
+.brief-section { padding-bottom:80px; }
+
+.brief-header {
+  padding:24px 24px 16px;
+  border-bottom:1px solid var(--border);
+}
+.brief-eyebrow {
+  font-size:10px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--g1); margin-bottom:6px;
+}
+.brief-title { font-size:18px; font-weight:700; letter-spacing:-0.4px; }
+.brief-subtitle { font-size:12px; color:var(--muted); margin-top:3px; }
+
+.brief-group { padding:16px 24px 4px; }
+.brief-group-label {
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--faint); margin-bottom:10px;
+  display:flex; align-items:center; gap:8px;
+}
+.brief-group-label::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+
+/* ── 14. Saved section ── */
+.saved-section { padding-bottom:80px; }
+
+.saved-header {
+  padding:20px 24px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.saved-title { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+.saved-count { font-size:11px; color:var(--faint); }
+
+.empty-state {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:64px 24px; gap:12px;
+  text-align:center;
+}
+.empty-icon {
+  width:48px; height:48px; border-radius:50%;
+  background:var(--s2); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+}
+.empty-icon svg { width:20px; height:20px; stroke:var(--faint); fill:none; stroke-width:1.5; }
+.empty-title { font-size:14px; font-weight:600; color:var(--text); }
+.empty-sub { font-size:12px; color:var(--faint); max-width:280px; line-height:1.6; }
+
+/* ── 15. Item Cards — rounded premium boxes ── */
+.item-card {
+  position:relative;
+  padding:18px 20px;
+  margin:8px 0;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:rgba(17,17,19,0.65);
+  backdrop-filter:blur(10px);
+  cursor:pointer;
+  transition:background var(--tf), border-color var(--tf), transform var(--tf);
+  animation:signal-in 0.35s ease both;
+}
+.item-card::before {
+  content:'';
+  position:absolute; inset:0; border-radius:14px;
+  padding:1px; pointer-events:none;
+  background:linear-gradient(140deg,rgba(168,196,240,0.18),rgba(255,255,255,0.03) 40%,transparent 70%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  opacity:0; transition:opacity var(--tn);
+}
+.item-card:hover {
+  background:rgba(22,22,28,0.78);
+  border-color:var(--border-strong);
+  transform:translateY(-1px);
+}
+.item-card:hover::before { opacity:1; }
+.item-card.hero {
+  padding:20px 22px;
+  border-radius:18px;
+  background:rgba(17,17,19,0.78);
+  border:1px solid var(--border-strong);
+  margin:0;
+}
+.item-card.hero:hover {
+  background:rgba(22,22,28,0.88);
+  transform:translateY(-2px);
+  box-shadow:0 16px 40px -16px rgba(0,0,0,0.6),0 0 0 1px rgba(168,196,240,0.12);
+}
+.item-card.hero.high-signal {
+  border-color:rgba(168,196,240,0.28);
+  background:linear-gradient(180deg,rgba(168,196,240,0.05),rgba(17,17,19,0.78) 60%);
+}
+.item-card.hero.high-signal:hover {
+  border-color:rgba(168,196,240,0.50);
+  box-shadow:0 16px 40px -16px rgba(0,0,0,0.6),0 0 0 1px rgba(168,196,240,0.25),0 0 32px -8px rgba(168,196,240,0.18);
+}
+
+@keyframes signal-in {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Ping border glow on entry for high-signal cards */
+@keyframes signal-ping {
+  0%   { box-shadow:0 0 0 0 rgba(168,196,240,0.5); }
+  70%  { box-shadow:0 0 0 8px rgba(168,196,240,0); }
+  100% { box-shadow:0 0 0 0 rgba(168,196,240,0); }
+}
+.item-card.high-signal-ping { animation:signal-in 0.35s ease both, signal-ping 0.8s ease 0.3s; }
+
+.card-meta {
+  display:flex; align-items:center; gap:6px;
+  margin-bottom:9px; flex-wrap:wrap;
+}
+.card-source {
+  font-size:10.5px; font-weight:600; padding:2px 8px;
+  border-radius:4px; background:var(--s3);
+  border:1px solid var(--border); color:var(--muted);
+}
+.card-time { font-size:10.5px; color:var(--faint); }
+
+/* Signal label badges */
+.signal-badge {
+  font-size:10px; font-weight:700; padding:2px 8px;
+  border-radius:4px; letter-spacing:0.3px; margin-left:auto;
+  white-space:nowrap;
+}
+.signal-badge.high {
+  background:rgba(168,196,240,0.14); color:var(--g1);
+  border:1px solid rgba(168,196,240,0.3);
+}
+.signal-badge.peel {
+  background:linear-gradient(135deg,rgba(168,196,240,0.12),rgba(245,230,204,0.1));
+  color:var(--g2); border:1px solid rgba(245,230,204,0.2);
+}
+.signal-badge.watch {
+  background:rgba(250,204,21,0.1); color:var(--amber);
+  border:1px solid rgba(250,204,21,0.2);
+}
+.signal-badge.skim {
+  background:transparent; color:var(--faint);
+  border:1px solid var(--border);
+}
+
+/* Type badge */
+.type-badge {
+  font-size:9.5px; font-weight:600; padding:2px 7px;
+  border-radius:4px; text-transform:uppercase; letter-spacing:0.4px;
+}
+.type-badge.paper   { background:rgba(168,196,240,0.08); color:rgba(168,196,240,0.7); border:1px solid rgba(168,196,240,0.15); }
+.type-badge.model   { background:rgba(192,132,252,0.08); color:rgba(192,132,252,0.7); border:1px solid rgba(192,132,252,0.15); }
+.type-badge.company { background:rgba(74,222,128,0.08);  color:rgba(74,222,128,0.7);  border:1px solid rgba(74,222,128,0.15); }
+
+.card-title {
+  font-size:13.5px; font-weight:600; letter-spacing:-0.2px;
+  line-height:1.45; margin-bottom:7px; color:var(--text);
+}
+.card-summary {
+  font-size:12.5px; color:var(--muted); line-height:1.65;
+  margin-bottom:6px;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+.card-why {
+  font-size:11.5px; color:rgba(168,196,240,0.65);
+  line-height:1.6; margin-bottom:10px;
+  padding-left:10px; border-left:2px solid rgba(168,196,240,0.25);
+}
+
+.card-footer {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+}
+.tag-pill {
+  font-size:10.5px; color:var(--faint);
+  border:1px solid var(--border); padding:2px 8px; border-radius:4px;
+}
+.diff-pill { }
+.diff-easy     { color:#4ade80; border-color:rgba(74,222,128,0.2); }
+.diff-intermediate { color:#facc15; border-color:rgba(250,204,21,0.2); }
+.diff-advanced { color:#f87171; border-color:rgba(248,113,113,0.2); }
+
+/* ── Star Rating ── */
+.card-rating {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 0 0;
+  border-top:1px solid rgba(255,255,255,0.05);
+  margin-top:6px;
+  width:100%;
+}
+.star-row { display:flex; flex-direction:row-reverse; justify-content:flex-end; gap:2px; }
+.star {
+  font-size:14px; color:rgba(246,247,249,0.18);
+  cursor:pointer; transition:color .15s, transform .15s;
+  line-height:1;
+}
+.star.filled { color:#f5c842; }
+.star:hover, .star:hover ~ .star { color:#f5c842 !important; }
+.star-row:hover .star { color:rgba(246,247,249,0.18) !important; }
+.star-row:hover .star:hover, .star-row:hover .star:hover ~ .star { color:#f5c842 !important; }
+.star:hover { transform:scale(1.2); }
+.rating-info {
+  font-size:10.5px; color:var(--faint);
+  font-variant-numeric:tabular-nums;
+}
+.rating-info.faint { color:rgba(246,247,249,0.22); font-style:italic; }
+
+.card-actions {
+  margin-left:auto; display:flex; align-items:center; gap:4px;
+}
+.action-btn {
+  font-size:11px; font-weight:500;
+  padding:4px 9px; border-radius:var(--radius-xs);
+  transition:all var(--tf); white-space:nowrap;
+}
+.action-btn.peel-btn {
+  background:rgba(168,196,240,0.1); color:var(--g1);
+  border:1px solid rgba(168,196,240,0.22);
+}
+.action-btn.peel-btn:hover { background:rgba(168,196,240,0.18); border-color:rgba(168,196,240,0.4); }
+.action-btn.open-btn {
+  background:transparent; color:var(--muted); border:1px solid var(--border);
+}
+.action-btn.open-btn:hover { background:var(--s2); color:var(--text); border-color:var(--border-strong); }
+.action-btn.save-btn {
+  padding:4px 7px;
+  background:transparent; color:var(--faint); border:1px solid var(--border);
+  position:relative; overflow:hidden;
+}
+.action-btn.save-btn:hover { color:var(--text); border-color:var(--border-strong); }
+.action-btn.save-btn.saved { color:var(--g1); border-color:rgba(168,196,240,0.3); background:rgba(168,196,240,0.08); }
+.action-btn.save-btn svg { width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2; transition:all var(--tf); }
+.action-btn.save-btn.saved svg { fill:var(--g1); stroke:var(--g1); }
+
+/* Captured-in-lens save animation */
+@keyframes captured {
+  0%   { transform:scale(1); }
+  35%  { transform:scale(0.82); }
+  70%  { transform:scale(1.18); }
+  100% { transform:scale(1); }
+}
+.action-btn.save-btn.capturing { animation:captured 0.38s ease; }
+
+/* ── 16. Skeleton loaders — match rounded card style ── */
+.sk-card {
+  padding:18px 20px; margin:8px 0;
+  border:1px solid var(--border); border-radius:14px;
+  background:rgba(17,17,19,0.65); backdrop-filter:blur(10px);
+}
+.sk-card.hero-sk {
+  padding:20px 22px; margin:0;
+  border-radius:18px; background:rgba(17,17,19,0.78);
+  border:1px solid var(--border-strong);
+}
+.skl {
+  background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);
+  background-size:200% 100%; animation:sh 1.5s infinite;
+  border-radius:4px; height:12px; margin-bottom:8px;
+}
+@keyframes sh { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── 17. Company source colors ── */
+.company-badge {
+  font-size:9.5px; font-weight:700; padding:2px 8px;
+  border-radius:4px; text-transform:uppercase; letter-spacing:0.5px;
+}
+.src-OpenAI        { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.12); }
+.src-Anthropic     { background:rgba(168,196,240,0.1); color:rgba(168,196,240,0.8); border:1px solid rgba(168,196,240,0.2); }
+.src-Google-DeepMind { background:rgba(74,222,128,0.08); color:rgba(74,222,128,0.75); border:1px solid rgba(74,222,128,0.18); }
+.src-Meta-AI       { background:rgba(96,165,250,0.08); color:rgba(96,165,250,0.75); border:1px solid rgba(96,165,250,0.18); }
+.src-Mistral-AI    { background:rgba(251,146,60,0.08); color:rgba(251,146,60,0.75); border:1px solid rgba(251,146,60,0.18); }
+.src-Google-AI     { background:rgba(52,211,153,0.08); color:rgba(52,211,153,0.75); border:1px solid rgba(52,211,153,0.18); }
+.src-HuggingFace   { background:rgba(245,158,11,0.08); color:rgba(245,158,11,0.75); border:1px solid rgba(245,158,11,0.18); }
+.src-arXiv         { background:rgba(248,113,113,0.08); color:rgba(248,113,113,0.75); border:1px solid rgba(248,113,113,0.18); }
+
+/* ── 18. Email modal (right drawer) ── */
+.modal-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(9,9,11,0.6); backdrop-filter:blur(6px);
+  opacity:0; pointer-events:none;
+  transition:opacity var(--tn);
+}
+.modal-overlay.open { opacity:1; pointer-events:auto; }
+
+.email-drawer {
+  position:absolute; top:0; right:0; bottom:0;
+  width:min(400px,100vw);
+  background:var(--s1); border-left:1px solid var(--border);
+  display:flex; flex-direction:column;
+  transform:translateX(100%); transition:transform var(--ts);
+  overflow:hidden;
+}
+.modal-overlay.open .email-drawer { transform:translateX(0); }
+
+.drawer-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.drawer-title { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+.drawer-close {
+  width:28px; height:28px; border-radius:var(--radius-xs);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted); transition:all var(--tf);
+}
+.drawer-close:hover { background:var(--s2); color:var(--text); }
+.drawer-close svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; }
+
+.drawer-body { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px; }
+
+.drawer-desc { font-size:13px; color:var(--muted); line-height:1.7; }
+.drawer-desc strong { color:var(--text); }
+
+/* OTP state machine */
+.otp-state { display:flex; flex-direction:column; gap:14px; }
+.otp-state[data-step="verify"] .verify-only { display:flex; }
+.otp-state[data-step="email"]  .verify-only { display:none; }
+.otp-state[data-step="done"]   .pre-done    { display:none; }
+.otp-state:not([data-step="done"]) .post-done { display:none; }
+
+.field-label { font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:5px; }
+.field-input {
+  width:100%; background:rgba(255,255,255,0.04);
+  border:1px solid var(--border); border-radius:var(--radius-xs);
+  padding:9px 12px; font-size:13.5px; color:var(--text);
+  font-family:var(--font); outline:none;
+  transition:border-color var(--tf),box-shadow var(--tf);
+}
+.field-input:focus { border-color:rgba(168,196,240,0.45); box-shadow:0 0 0 3px rgba(168,196,240,0.08); }
+.field-input::placeholder { color:var(--faint); }
+
+/* OTP digit boxes */
+.otp-digits {
+  display:flex; gap:8px;
+}
+.otp-digit {
+  flex:1; height:48px; text-align:center; font-size:20px; font-weight:700;
+  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:var(--radius-xs); color:var(--text); font-family:var(--font);
+  outline:none; transition:border-color var(--tf);
+  animation:otp-in 0.25s ease both;
+}
+.otp-digit:focus { border-color:rgba(168,196,240,0.45); background:rgba(168,196,240,0.04); }
+.otp-digit:nth-child(1) { animation-delay:0s; }
+.otp-digit:nth-child(2) { animation-delay:.04s; }
+.otp-digit:nth-child(3) { animation-delay:.08s; }
+.otp-digit:nth-child(4) { animation-delay:.12s; }
+.otp-digit:nth-child(5) { animation-delay:.16s; }
+.otp-digit:nth-child(6) { animation-delay:.20s; }
+@keyframes otp-in { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+.otp-hint { font-size:11px; color:var(--faint); }
+.otp-resend { font-size:11px; color:var(--g1); cursor:pointer; border:none; background:none; font-family:var(--font); }
+.otp-resend:hover { text-decoration:underline; }
+
+.primary-action {
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:10px 20px; border-radius:var(--radius-sm);
+  background:var(--g1); color:#09090b;
+  font-size:13px; font-weight:600; letter-spacing:-0.15px;
+  transition:opacity var(--tf),transform var(--tf);
+  white-space:nowrap;
+}
+.primary-action:hover { opacity:.88; transform:translateY(-1px); }
+.primary-action:disabled { opacity:.32; pointer-events:none; }
+.primary-action svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
+
+/* Success state */
+.success-state {
+  display:flex; flex-direction:column; align-items:center;
+  gap:14px; text-align:center; padding:20px 0;
+}
+.success-icon {
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.25);
+  display:flex; align-items:center; justify-content:center;
+  animation:success-pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes success-pop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+.success-icon svg { width:22px; height:22px; stroke:var(--g3); fill:none; stroke-width:2.5; stroke-linecap:round; }
+.success-title { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+.success-desc { font-size:12.5px; color:var(--muted); line-height:1.65; }
+
+.drawer-footer { padding:0 20px 20px; flex-shrink:0; }
+.drawer-footer-note { font-size:11px; color:var(--faint); margin-top:10px; line-height:1.6; }
+
+/* ── 19. Toast ── */
+.toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  z-index:300; padding:10px 18px; border-radius:var(--radius-sm);
+  background:rgba(22,22,28,0.95); border:1px solid var(--border-strong);
+  font-size:12.5px; color:var(--text); white-space:nowrap;
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  animation:toast-in 0.25s ease;
+}
+@keyframes toast-in { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+/* ── 20. Mobile bottom tabs ── */
+.mob-tabs {
+  display:none;
+  height:var(--mob-tabs-h);
+  position:fixed; bottom:0; left:0; right:0; z-index:30;
+  background:rgba(9,9,11,0.95); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  align-items:stretch; justify-content:stretch;
+}
+.mob-tab-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:3px; font-size:9.5px; color:var(--faint);
+  transition:color var(--tf); padding:0 4px;
+}
+.mob-tab-btn svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.mob-tab-btn.active { color:var(--g1); }
+.mob-tab-btn .mob-badge {
+  position:absolute; top:6px; right:calc(50% - 16px);
+  width:6px; height:6px; border-radius:50%; background:var(--g1);
+}
+
+/* ── 21. Responsive ── */
+@media (max-width:900px) {
+  .section-tabs { display:none; }
+  #home-content { padding:26px 18px 78px; }
+  .home-top-split {
+    grid-template-columns:1fr;
+    min-height:auto;
+    gap:22px;
+  }
+  .home-hero-title {
+    font-size:clamp(38px,12vw,56px);
+    letter-spacing:-2.2px;
+    max-width:680px;
+  }
+  .home-hero-sub { font-size:14.5px; max-width:620px; }
+  .home-right-radar { order:2; }
+  .radar-hud-frame { max-width:none; min-height:300px; }
+  .radar-console { min-height:256px; }
+  .hero-cards { grid-template-columns:1fr; padding:0; }
+  .section-nav-grid { grid-template-columns:repeat(2,minmax(0,1fr)); max-width:none; }
+  .feed-list { padding:10px 16px; }
+  .feed-header { padding:10px 16px; }
+  .brief-group { padding:12px 16px 4px; }
+  .brief-header { padding:16px 16px 12px; }
+  .saved-header { padding:16px 16px 12px; }
+}
+
+@media (max-width:768px) {
+  .sidebar { transform:translateX(calc(-1 * var(--sidebar-w) - 30px)); }
+  .sidebar.mob-open { transform:translateX(0) !important; }
+  .main { left:0 !important; padding-bottom:var(--mob-tabs-h); }
+  .sec-home::after { inset:var(--topbar-h) 0 var(--mob-tabs-h) 0; }
+  .mob-tabs { display:flex; }
+  .mail-btn span { display:none; }
+  .tb-center { display:none; }
+  .app-shell { bottom:var(--mob-tabs-h); }
+}
+
+@media (max-width:560px) {
+  #home-content { padding:20px 14px 76px; }
+  .home-hero-eyebrow { font-size:9px; letter-spacing:1.4px; }
+  .home-hero-title { font-size:clamp(34px,11.4vw,46px); letter-spacing:-1.8px; }
+  .home-hero-sub { font-size:13.5px; line-height:1.65; }
+  .home-hero-stats { gap:8px; margin-bottom:18px; }
+  .hero-stat { padding:7px 10px; }
+  .hero-stat-num { font-size:15px; }
+  .hero-stat-label { font-size:10px; }
+  .section-nav-grid { grid-template-columns:1fr; gap:9px; }
+  .snav-card { padding:12px; }
+  .radar-hud-frame { min-height:280px; padding:18px; border-radius:18px; }
+  .radar-console { min-height:238px; }
+  .radar-console-title { font-size:23px; }
+  .radar-console-copy { font-size:12.5px; }
+  .radar-console-footer { align-items:flex-start; flex-direction:column; }
+  .radar-console-btn { width:100%; text-align:center; }
+  .signal-row { grid-template-columns:auto 1fr; }
+  .signal-value { grid-column:2; margin-top:-6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Three.js canvas — section data stream -->
+<canvas id="radarSectionCanvas" aria-hidden="true"></canvas>
+
+<div class="backdrop-glow" aria-hidden="true"></div>
+<div class="mob-overlay" id="mob-overlay" onclick="closeMob()"></div>
+
+<!-- ════ SIDEBAR ════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="sb-logo" onclick="window.location.href='dashboard.html'" title="PaperLens Home">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <circle cx="13" cy="13" r="9" stroke="url(#rslg)" stroke-width="1.8"/>
+        <circle cx="13" cy="13" r="4.5" stroke="url(#rslg)" stroke-width="1" opacity="0.6"/>
+        <circle cx="13" cy="13" r="1.8" fill="url(#rslg)"/>
+        <line x1="19.5" y1="19.5" x2="25.5" y2="25.5" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <defs>
+          <linearGradient id="rslg" x1="0" y1="0" x2="28" y2="28">
+            <stop offset="0%" stop-color="#a8c4f0"/>
+            <stop offset="100%" stop-color="#f5e6cc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="logo-b">Paper</span><span class="logo-l">Lens</span>
+    </div>
+    <button class="sb-close-btn" id="sb-close-btn" type="button" aria-label="Close sidebar" title="Close sidebar" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
+
+  <nav class="sb-nav" aria-label="Main navigation">
+    <div class="sb-section-label">Main</div>
+    <a class="sb-nav-item" href="dashboard.html">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="sb-nav-item" href="peeler.html">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Paper Peeler
+    </a>
+    <a class="sb-nav-item active" href="radar.html" aria-current="page">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
+      Research Radar
+    </a>
+  </nav>
+
+  <div class="sb-bottom">
+    <a class="user-row" href="settings.html" title="Settings">
+      <div class="uav" id="uav">?</div>
+      <div class="uinfo">
+        <div class="uname" id="uname">Loading…</div>
+        <div class="uplan" id="uplan">Free plan</div>
+      </div>
+      <svg class="sb-settings-cog" viewBox="0 0 24 24" style="width:16px; height:16px; stroke:rgba(255,255,255,0.4); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; margin-left:auto;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </a>
+  </div>
+</aside>
+
+<!-- ════ MAIN ════ -->
+<div class="main" id="main">
+
+  <!-- Topbar -->
+  <header class="topbar" role="banner">
+    <div class="tb-left">
+      <button class="sb-toggle" id="sb-toggle" title="Toggle sidebar" aria-label="Toggle sidebar" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="tb-brand" onclick="goTo('home')" title="Research Radar home">
+        <svg class="tb-brand-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <circle cx="14" cy="14" r="10" stroke="url(#tbg)" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="5"  stroke="url(#tbg)" stroke-width="1" opacity="0.6"/>
+          <circle cx="14" cy="14" r="2"  fill="url(#tbg)"/>
+          <defs>
+            <linearGradient id="tbg" x1="0" y1="0" x2="28" y2="28">
+              <stop offset="0%" stop-color="#a8c4f0"/>
+              <stop offset="100%" stop-color="#f5e6cc"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="tb-brand-name">Research Radar</span>
+      </div>
+      <div class="section-tabs" id="section-tabs" role="tablist">
+        <button class="tab-btn" data-tab="brief" onclick="goTo('brief',this)" role="tab">Today's Brief</button>
+        <button class="tab-btn" data-tab="papers" onclick="goTo('papers',this)" role="tab">Latest Papers</button>
+        <button class="tab-btn" data-tab="models" onclick="goTo('models',this)" role="tab">New Models</button>
+        <button class="tab-btn" data-tab="companies" onclick="goTo('companies',this)" role="tab">Companies</button>
+        <button class="tab-btn" data-tab="saved" onclick="goTo('saved',this)" role="tab">Saved</button>
+      </div>
+      <div class="tb-status-mini">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Loading…</span>
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="mail-btn" id="mail-btn" onclick="openEmailDrawer()" aria-label="Connect mail for daily digest">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span>Connect mail</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- App shell -->
+  <div class="app-shell" id="app-shell" data-section="home">
+
+    <!-- ══ HOME ══ -->
+    <section class="section sec-home" id="sec-home" role="tabpanel">
+      <canvas id="radarHomeCanvas" aria-hidden="true"></canvas>
+
+      <!-- Radar loading state -->
+      <div class="radar-loading" id="radar-loading">
+        <div class="radar-visual">
+          <div class="radar-circle-wrap">
+            <div class="radar-sweep"></div>
+          </div>
+          <div class="radar-rings">
+            <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%">
+              <circle cx="80" cy="80" r="72" stroke="rgba(168,196,240,0.12)" stroke-width="1"/>
+              <circle cx="80" cy="80" r="50" stroke="rgba(168,196,240,0.09)" stroke-width="1"/>
+              <circle cx="80" cy="80" r="28" stroke="rgba(168,196,240,0.07)" stroke-width="1"/>
+              <line x1="8"  y1="80" x2="152" y2="80" stroke="rgba(168,196,240,0.06)" stroke-width="1"/>
+              <line x1="80" y1="8"  x2="80" y2="152" stroke="rgba(168,196,240,0.06)" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="radar-arm"></div>
+          <div class="radar-center-dot"></div>
+          <div class="radar-blips" id="radar-blips"></div>
+        </div>
+        <div class="radar-copy">
+          <div class="radar-phase">Scanning AI/ML sources</div>
+          <div class="radar-count" id="radar-count">0</div>
+          <div class="radar-label">items found</div>
+        </div>
+      </div>
+
+      <!-- Home content (hidden until loaded) -->
+      <div id="home-content" hidden>
+        
+        <!-- Top Half: Split Hero & Interactive Radar HUD -->
+        <div class="home-top-split">
+          
+          <!-- Left side: Typography, Stats, and Navigation Grid -->
+          <div class="home-left-hero">
+            <div class="home-hero-eyebrow">Research Radar</div>
+            <h1 class="home-hero-title" id="home-title">Today's AI Research Brief</h1>
+            <p class="home-hero-sub">Importance-first intelligence across papers, models &amp; labs — scanned every 30 minutes.</p>
+            
+            <div class="home-hero-stats">
+              <div class="hero-stat">
+                <span class="hero-stat-num" id="scan-scanned">—</span>
+                <span class="hero-stat-label">scanned today</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-num" id="scan-signal">—</span>
+                <span class="hero-stat-label">high-signal items</span>
+              </div>
+            </div>
+
+            <!-- Section quick-nav grid in left hero -->
+            <div class="section-nav-grid">
+              <div class="snav-card" onclick="goTo('brief')">
+                <div class="snav-card-icon">
+                  <svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2z"/><path d="M12 11h4"/><path d="M12 15h4"/><path d="M8 11h.01"/><path d="M8 15h.01"/><path d="M8 7h8"/></svg>
+                </div>
+                <div class="snav-card-info">
+                  <span class="snav-card-label">Daily Brief</span>
+                  <span class="snav-card-count" id="snav-brief-count">Curated summary</span>
+                </div>
+              </div>
+              <div class="snav-card" onclick="goTo('papers')">
+                <div class="snav-card-icon">
+                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div class="snav-card-info">
+                  <span class="snav-card-label">Latest Papers</span>
+                  <span class="snav-card-count" id="snav-papers-count">0 papers</span>
+                </div>
+              </div>
+              <div class="snav-card" onclick="goTo('models')">
+                <div class="snav-card-icon">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polygon points="2 17 12 22 22 17"/><polygon points="2 12 17 22 12"/></svg>
+                </div>
+                <div class="snav-card-info">
+                  <span class="snav-card-label">New Models</span>
+                  <span class="snav-card-count" id="snav-models-count">0 models</span>
+                </div>
+              </div>
+              <div class="snav-card" onclick="goTo('companies')">
+                <div class="snav-card-icon">
+                  <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div class="snav-card-info">
+                  <span class="snav-card-label">Company Blogs</span>
+                  <span class="snav-card-count" id="snav-companies-count">0 updates</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right side: foreground signal console; the 3D radar runs as the full background -->
+          <div class="home-right-radar">
+            <div class="radar-hud-frame">
+              <div class="hud-corner tl">[ ]</div>
+              <div class="hud-corner tr">[ ]</div>
+              <div class="hud-corner bl">[ ]</div>
+              <div class="hud-corner br">[ ]</div>
+              <div class="radar-console">
+                <div>
+                  <div class="radar-console-kicker">Live signal desk</div>
+                  <div class="radar-console-title">Papers, models and lab updates mapped into one research layer.</div>
+                  <p class="radar-console-copy">Research Radar scans the fast-moving AI/ML web, separates noise from signal, and routes important papers straight into Paper Peeler.</p>
+                </div>
+                <div class="signal-stack" aria-label="Research Radar coverage">
+                  <div class="signal-row">
+                    <span class="signal-dot"></span>
+                    <span class="signal-name">arXiv papers</span>
+                    <span class="signal-value">cs.AI · cs.LG</span>
+                  </div>
+                  <div class="signal-row">
+                    <span class="signal-dot"></span>
+                    <span class="signal-name">Model releases</span>
+                    <span class="signal-value">HF Hub</span>
+                  </div>
+                  <div class="signal-row">
+                    <span class="signal-dot"></span>
+                    <span class="signal-name">Company labs</span>
+                    <span class="signal-value">OpenAI · DeepMind</span>
+                  </div>
+                </div>
+                <div class="radar-console-footer">
+                  <span>Importance-first</span>
+                  <button class="radar-console-btn" onclick="goTo('brief')">Open today’s brief</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Half: Highlights cards container -->
+        <div class="home-bottom-zone">
+          <div class="home-cards-header">
+            <span class="home-cards-eyebrow">Top of the brief</span>
+            <span class="home-cards-action" onclick="goTo('brief')">View full brief →</span>
+          </div>
+
+          <div class="hero-cards" id="hero-cards">
+            <div class="sk-card hero-sk"><div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:85%"></div><div class="skl" style="width:70%;margin-bottom:14px"></div><div class="skl" style="width:50%;height:10px"></div></div>
+            <div class="sk-card hero-sk"><div class="skl" style="width:25%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:90%"></div><div class="skl" style="width:65%;margin-bottom:14px"></div><div class="skl" style="width:45%;height:10px"></div></div>
+            <div class="sk-card hero-sk"><div class="skl" style="width:28%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:80%"></div><div class="skl" style="width:72%;margin-bottom:14px"></div><div class="skl" style="width:55%;height:10px"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ BRIEF ══ -->
+    <section class="section sec-brief brief-section" id="sec-brief" role="tabpanel">
+      <div class="brief-header">
+        <div class="brief-eyebrow">Daily Intelligence</div>
+        <div class="brief-title" id="brief-title">Today's Brief</div>
+        <div class="brief-subtitle" id="brief-subtitle">Curated by importance · not by time</div>
+      </div>
+      <div id="brief-content">
+        <div style="padding:16px 24px"><div class="sk-card"><div class="skl" style="width:85%"></div><div class="skl" style="width:70%;margin-bottom:14px"></div><div class="skl" style="width:50%;height:10px"></div></div></div>
+      </div>
+    </section>
+
+    <!-- ══ PAPERS ══ -->
+    <section class="section sec-papers feed-section" id="sec-papers" role="tabpanel">
+      <div class="feed-header">
+        <div class="feed-title">Latest Papers</div>
+        <div class="filter-chips" id="papers-filters">
+          <button class="chip-btn active" data-topic="all" onclick="setPaperTopic('all',this)">All</button>
+          <button class="chip-btn" data-topic="LLMs" onclick="setPaperTopic('LLMs',this)">LLMs</button>
+          <button class="chip-btn" data-topic="Computer Vision" onclick="setPaperTopic('Computer Vision',this)">CV</button>
+          <button class="chip-btn" data-topic="RL / Agents" onclick="setPaperTopic('RL / Agents',this)">RL / Agents</button>
+          <button class="chip-btn" data-topic="Diffusion Models" onclick="setPaperTopic('Diffusion Models',this)">Diffusion</button>
+          <button class="chip-btn" data-topic="AI Safety" onclick="setPaperTopic('AI Safety',this)">Safety</button>
+        </div>
+        <div class="sort-toggle">
+          <button class="sort-btn active" id="papers-sort-attn" onclick="setPaperSort('attention',this)">Importance</button>
+          <button class="sort-btn" id="papers-sort-new"  onclick="setPaperSort('newest',this)">Newest</button>
+        </div>
+      </div>
+      <div class="feed-list" id="papers-list">
+        <div class="sk-card"><div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:88%"></div><div class="skl" style="width:70%;margin-bottom:10px"></div><div class="skl" style="width:45%;height:10px"></div></div>
+        <div class="sk-card"><div class="skl" style="width:25%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:92%"></div><div class="skl" style="width:66%;margin-bottom:10px"></div><div class="skl" style="width:50%;height:10px"></div></div>
+        <div class="sk-card"><div class="skl" style="width:28%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:80%"></div><div class="skl" style="width:72%;margin-bottom:10px"></div><div class="skl" style="width:40%;height:10px"></div></div>
+      </div>
+      <button class="load-more-btn" id="papers-more" hidden onclick="loadMorePapers()">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        Load more papers
+      </button>
+    </section>
+
+    <!-- ══ MODELS ══ -->
+    <section class="section sec-models feed-section" id="sec-models" role="tabpanel">
+      <div class="feed-header">
+        <div class="feed-title">New Models</div>
+        <div class="filter-chips"></div>
+        <div class="sort-toggle">
+          <button class="sort-btn active" id="models-sort-attn" onclick="setModelSort('attention',this)">Importance</button>
+          <button class="sort-btn" id="models-sort-new"  onclick="setModelSort('newest',this)">Newest</button>
+        </div>
+      </div>
+      <div class="feed-list" id="models-list">
+        <div class="sk-card"><div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:85%"></div><div class="skl" style="width:65%;margin-bottom:10px"></div><div class="skl" style="width:42%;height:10px"></div></div>
+        <div class="sk-card"><div class="skl" style="width:26%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:90%"></div><div class="skl" style="width:70%;margin-bottom:10px"></div><div class="skl" style="width:48%;height:10px"></div></div>
+      </div>
+      <button class="load-more-btn" id="models-more" hidden onclick="loadMoreModels()">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        Load more models
+      </button>
+    </section>
+
+    <!-- ══ COMPANIES ══ -->
+    <section class="section sec-companies feed-section" id="sec-companies" role="tabpanel">
+      <div class="feed-header">
+        <div class="feed-title">Company Updates</div>
+        <div class="filter-chips"></div>
+        <div class="sort-toggle">
+          <button class="sort-btn active" id="co-sort-attn" onclick="setCoSort('attention',this)">Importance</button>
+          <button class="sort-btn" id="co-sort-new"  onclick="setCoSort('newest',this)">Newest</button>
+        </div>
+      </div>
+      <div class="feed-list" id="companies-list">
+        <div class="sk-card"><div class="skl" style="width:20%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:82%"></div><div class="skl" style="width:68%;margin-bottom:10px"></div><div class="skl" style="width:40%;height:10px"></div></div>
+        <div class="sk-card"><div class="skl" style="width:22%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:88%"></div><div class="skl" style="width:62%;margin-bottom:10px"></div><div class="skl" style="width:44%;height:10px"></div></div>
+      </div>
+      <button class="load-more-btn" id="companies-more" hidden onclick="loadMoreCompanies()">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        Load more updates
+      </button>
+    </section>
+
+    <!-- ══ SAVED ══ -->
+    <section class="section sec-saved saved-section" id="sec-saved" role="tabpanel">
+      <div class="saved-header">
+        <div class="saved-title">Reading Queue</div>
+        <div class="saved-count" id="saved-count">—</div>
+      </div>
+      <div id="saved-content">
+        <div class="empty-state" id="saved-empty" hidden>
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="empty-title">No saved items yet</div>
+          <div class="empty-sub">Save papers, models, and updates to read later. They'll appear here.</div>
+        </div>
+        <div class="feed-list" id="saved-list"></div>
+      </div>
+    </section>
+
+  </div><!-- /app-shell -->
+
+  <!-- Mobile bottom tabs -->
+  <nav class="mob-tabs" id="mob-tabs" aria-label="Section navigation">
+    <button class="mob-tab-btn active" data-tab="home" onclick="goTo('home',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+      Radar
+    </button>
+    <button class="mob-tab-btn" data-tab="brief" onclick="goTo('brief',this)">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Brief
+    </button>
+    <button class="mob-tab-btn" data-tab="papers" onclick="goTo('papers',this)">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Papers
+    </button>
+    <button class="mob-tab-btn" data-tab="companies" onclick="goTo('companies',this)">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Labs
+    </button>
+    <button class="mob-tab-btn" data-tab="saved" onclick="goTo('saved',this)">
+      <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      Saved
+    </button>
+  </nav>
+
+</div><!-- /main -->
+
+<!-- ════ EMAIL DRAWER ════ -->
+<div class="modal-overlay" id="email-overlay" onclick="handleOverlayClick(event)">
+  <div class="email-drawer" id="email-drawer" role="dialog" aria-modal="true" aria-label="Connect mail for daily digest">
+    <div class="drawer-head">
+      <div class="drawer-title">Connect PaperLens to your mail</div>
+      <button class="drawer-close" onclick="closeEmailDrawer()" aria-label="Close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <p class="drawer-desc">
+        Get your <strong>daily AI/ML brief</strong> delivered to your inbox.
+        Papers worth peeling, new models, and company moves — every morning.
+      </p>
+
+      <div class="otp-state" id="otp-state" data-step="email">
+
+        <!-- Step 1: Email input (always visible until done) -->
+        <div class="pre-done">
+          <div class="field-label">Email address</div>
+          <input class="field-input" type="email" id="otp-email"
+            placeholder="you@example.com" autocomplete="email"
+            onkeydown="if(event.key==='Enter')sendOTP()"/>
+
+          <!-- Step 2: OTP digits (verify only) -->
+          <div class="verify-only" style="flex-direction:column;gap:10px;margin-top:4px">
+            <div class="field-label">Verification code</div>
+            <div class="otp-digits" id="otp-digits">
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="0" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="1" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="2" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="3" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="4" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+              <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" data-idx="5" oninput="otpInput(this)" onkeydown="otpKey(event,this)"/>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span class="otp-hint" id="otp-hint">Expires in 10 minutes</span>
+              <button class="otp-resend" id="otp-resend" onclick="sendOTP(true)">Resend</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success state -->
+        <div class="post-done">
+          <div class="success-state">
+            <div class="success-icon">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="success-title">Daily digest enabled</div>
+            <div class="success-desc" id="success-email-desc">
+              Your morning brief will arrive at <strong id="success-email"></strong>.
+              You can change the time in Settings.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <div id="otp-action-wrap">
+        <button class="primary-action" id="otp-action-btn" onclick="otpAction()" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Send verification code
+        </button>
+      </div>
+      <div class="drawer-footer-note">
+        We only send the daily digest email. No marketing, no spam.
+        You can disable anytime from Settings.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   PaperLens Research Radar — Main Script
+   ═══════════════════════════════════════════ */
+
+const SUPABASE_URL     = 'https://tzzleyysodusezlpttcl.supabase.co';
+const SUPABASE_ANON_KEY= 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6emxleXlzb2R1c2V6bHB0dGNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3ODM3NDYsImV4cCI6MjA5NTM1OTc0Nn0.JuKKiPc1j-XM3Clj6P-eqYUHNP6ek3BZXCOWjIdvG6Q';
+const API_BASE         = 'http://localhost:8000';
+
+let sb, authToken = null;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
+
+/* ── State ── */
+const state = {
+  section: 'home',
+  plan: 'free',
+  papers:    { items:[], offset:0, topic:'all', sort:'attention', loading:false, exhausted:false },
+  models:    { items:[], offset:0, sort:'attention', loading:false, exhausted:false },
+  companies: { items:[], offset:0, sort:'attention', loading:false, exhausted:false },
+  saved:     { items:[], loaded:false },
+  brief:     { loaded:false },
+  home:      { loaded:false },
+  savedIds:  new Set(),
+};
+
+/* ── Utils ── */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+function toast(msg, dur=3200) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, dur);
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const h = Math.floor(diff/3600000);
+  if (h < 1) return 'just now';
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Section routing ── */
+function goTo(section, btnEl) {
+  state.section = section;
+  $('#app-shell').dataset.section = section;
+  // Desktop tabs
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === section));
+  // Mobile tabs
+  $$('.mob-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === section));
+  // Load section data
+  if (section === 'papers'    && !state.papers.items.length)    loadPapers(true);
+  if (section === 'models'    && !state.models.items.length)    loadModels(true);
+  if (section === 'companies' && !state.companies.items.length) loadCompanies(true);
+  if (section === 'brief'     && !state.brief.loaded)           loadBrief();
+  if (section === 'saved'     && !state.saved.loaded)           loadSaved();
+}
+
+/* ── Sidebar toggle ── */
+function toggleSidebar() {
+  const sb = $('#sidebar'), main = $('#main');
+  if (window.innerWidth <= 768) {
+    sb.classList.toggle('mob-open');
+    $('#mob-overlay').classList.toggle('show', sb.classList.contains('mob-open'));
+  } else {
+    const closing = !sb.classList.contains('closed');
+    sb.classList.toggle('closed', closing);
+    localStorage.setItem('pl_sb', closing ? 'closed' : 'open');
+  }
+}
+function closeMob() {
+  $('#sidebar').classList.remove('mob-open');
+  $('#mob-overlay').classList.remove('show');
+}
+
+/* ── Auth profile helper ── */
+function setupProfile(user) {
+  const u = user || {
+    email: 'dev@paperlens.local',
+    user_metadata: { full_name: 'Aryan Kumar', plan: 'pro' }
+  };
+  const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
+  const ini  = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  const plan = u.user_metadata?.plan || 'free';
+  state.plan = plan;
+  
+  const uav = $('#uav');
+  const uname = $('#uname');
+  const uplan = $('#uplan');
+  if (uav) uav.textContent = ini;
+  if (uname) uname.textContent = name;
+  if (uplan) uplan.textContent = plan === 'pro' ? 'Pro plan' : 'Free plan';
+}
+
+/* ── Auth ── */
+async function initAuth() {
+  setupProfile();
+  if (!sb) { loadHomeWithMock(); return; }
+  try {
+    const { data:{session} } = await sb.auth.getSession();
+    if (session) {
+      setupProfile(session.user);
+      authToken = session.access_token || '';
+    }
+  } catch(e) { console.warn('Auth error', e); }
+  // Restore sidebar state
+  if (localStorage.getItem('pl_sb') === 'closed') $('#sidebar').classList.add('closed');
+  loadHome();
+}
+
+/* ── API fetch helper ── */
+async function apiFetch(path, method='GET', body=null) {
+  const headers = { 'Content-Type':'application/json' };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const resp = await fetch(API_BASE + path, opts);
+  if (!resp.ok) throw new Error(`API ${resp.status}`);
+  return resp.json();
+}
+
+/* ═══════ RADAR LOADING ANIMATION ═══════ */
+function startRadarScan(total, onDone) {
+  const countEl = $('#radar-count');
+  const blipsEl = $('#radar-blips');
+  let current = 0;
+  const duration = 1800; // ms
+  const interval = duration / total;
+  const cx = 80, cy = 80, r = 65;
+
+  const ticker = setInterval(() => {
+    current = Math.min(current + Math.ceil(total / 18), total);
+    countEl.textContent = current;
+    // Place a blip at random angle on the radar circle
+    const angle = (Math.random() * 360) * (Math.PI / 180);
+    const dist  = (0.3 + Math.random() * 0.65) * r;
+    const x = cx + dist * Math.cos(angle);
+    const y = cy + dist * Math.sin(angle);
+    const blip = document.createElement('div');
+    blip.className = 'blip';
+    blip.style.cssText = `left:${x/160*100}%;top:${y/160*100}%;`;
+    blipsEl.appendChild(blip);
+    if (blipsEl.children.length > 14) blipsEl.removeChild(blipsEl.firstChild);
+
+    if (current >= total) {
+      clearInterval(ticker);
+      setTimeout(onDone, 420);
+    }
+  }, interval);
+}
+
+function showHomeContent() {
+  const loading = $('#radar-loading'), content = $('#home-content');
+  loading.style.transition = 'opacity 0.35s ease';
+  loading.style.opacity = '0';
+  setTimeout(() => {
+    loading.hidden = true;
+    content.hidden = false;
+    content.style.opacity = '0';
+    content.style.transition = 'opacity 0.4s ease';
+    requestAnimationFrame(() => { content.style.opacity = '1'; });
+  }, 360);
+}
+
+/* ═══════ HOME / TODAY'S BRIEF DATA ═══════ */
+/* ── Typewriter animation ── */
+function typewriterEffect(el, text, speed = 38) {
+  el.textContent = '';
+  // Add cursor
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      el.insertBefore(document.createTextNode(text[i]), cursor);
+      i++;
+    } else {
+      clearInterval(interval);
+      // Remove cursor after 3s
+      setTimeout(() => cursor.remove(), 3000);
+    }
+  }, speed);
+}
+
+/* ── Animated count-up ── */
+function animateCount(el, target, duration = 900) {
+  const start = 0;
+  const startTime = performance.now();
+  const update = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    el.textContent = Math.round(start + (target - start) * eased);
+    if (progress < 1) requestAnimationFrame(update);
+  };
+  requestAnimationFrame(update);
+}
+
+async function loadHome() {
+  try {
+    const stats = await apiFetch('/api/radar/stats').catch(() => null);
+    if (stats) {
+      updateStatusText(stats.scanned_today || 0, stats.high_signal || 0);
+      updateNavCounts(stats);
+    }
+    const brief = await apiFetch('/api/radar/today').catch(() => null);
+    const total = (brief?.total) || (stats?.scanned_today) || 0;
+
+    startRadarScan(Math.max(total, 8), () => {
+      showHomeContent();
+      if (brief) renderHeroCards(brief);
+      state.home.loaded = true;
+
+      // Animate stat numbers counting up
+      if (stats) {
+        animateCount($('#scan-scanned'), stats.scanned_today || 0);
+        animateCount($('#scan-signal'),  stats.high_signal   || 0);
+      }
+
+      // Typewriter on title after content shows
+      const titleEl = $('#home-title');
+      const titleText = titleEl.textContent.trim() || 'Today\'s AI Research Brief';
+      setTimeout(() => typewriterEffect(titleEl, titleText, 35), 200);
+    });
+
+  } catch(e) {
+    console.warn('Home load error, using mock', e);
+    loadHomeWithMock();
+  }
+}
+
+function loadHomeWithMock() {
+  const mock = getMockStats();
+  updateStatusText(mock.scanned, mock.signal);
+  updateNavCounts(mock);
+  startRadarScan(mock.scanned, () => {
+    showHomeContent();
+    renderHeroCards(getMockBrief());
+    state.home.loaded = true;
+    animateCount($('#scan-scanned'), mock.scanned);
+    animateCount($('#scan-signal'),  mock.signal);
+    const titleEl = $('#home-title');
+    const titleText = titleEl.textContent.trim();
+    setTimeout(() => typewriterEffect(titleEl, titleText, 35), 200);
+  });
+}
+
+function updateStatusText(scanned, signal) {
+  $('#status-text').textContent = `${scanned} scanned · ${signal} high-signal`;
+}
+
+function updateNavCounts(stats) {
+  const bt = stats.by_type || {};
+  if (bt.paper)    $('#snav-papers-count').textContent    = `${bt.paper} papers`;
+  if (bt.model)    $('#snav-models-count').textContent    = `${bt.model} new models`;
+  if (bt.blog_post)$('#snav-companies-count').textContent = `${bt.blog_post} updates`;
+}
+
+/* ═══════ HERO CARDS ═══════ */
+function renderHeroCards(brief) {
+  const container = $('#hero-cards');
+  container.innerHTML = '';
+  const all = [
+    ...(brief.papers          || []).slice(0,1),
+    ...(brief.models          || []).slice(0,1),
+    ...(brief.company_updates || []).slice(0,1),
+  ];
+  if (!all.length) { all.push(...getMockBrief().papers.slice(0,3)); }
+  all.slice(0,3).forEach((item, i) => {
+    const card = buildCard(item, 'hero');
+    card.style.animationDelay = `${i * 0.1}s`;
+    container.appendChild(card);
+  });
+  // Brief subtitle — set directly (typewriter called separately after home loads)
+  if (brief.date_label) {
+    $('#brief-title').textContent = brief.date_label;
+    // home-title updated by typewriter after load
+    const titleEl = $('#home-title');
+    if (titleEl && !titleEl.querySelector('.cursor')) {
+      titleEl.textContent = brief.date_label;
+    }
+  }
+}
+
+/* ═══════ BRIEF ═══════ */
+async function loadBrief() {
+  const content = $('#brief-content');
+  try {
+    const brief = await apiFetch('/api/radar/today').catch(() => getMockBrief());
+    content.innerHTML = '';
+
+    const groups = [
+      { label:'High Signal',          items: [...(brief.papers||[]).filter(p=>p.signal_label==='High Signal'), ...(brief.company_updates||[]).filter(p=>p.signal_label==='High Signal')] },
+      { label:'Papers Worth Peeling', items: (brief.papers||[]).filter(p=>p.signal_label==='Worth Peeling').slice(0,4) },
+      { label:'Models to Watch',      items: (brief.models||[]).slice(0,3) },
+      { label:'Company Moves',        items: (brief.company_updates||[]).filter(p=>p.signal_label!=='High Signal').slice(0,3) },
+    ];
+
+    groups.forEach(group => {
+      if (!group.items.length) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'brief-group';
+      wrap.innerHTML = `<div class="brief-group-label">${esc(group.label)}</div>`;
+      const list = document.createElement('div');
+      list.className = 'feed-list'; list.style.padding = '0';
+      group.items.forEach((item, i) => {
+        const card = buildCard(item, 'list');
+        card.style.animationDelay = `${i * 0.06}s`;
+        list.appendChild(card);
+      });
+      wrap.appendChild(list);
+      content.appendChild(wrap);
+    });
+    state.brief.loaded = true;
+  } catch(e) {
+    content.innerHTML = '<div style="padding:24px;color:var(--faint);font-size:13px">Could not load brief. Check your connection.</div>';
+  }
+}
+
+/* ═══════ PAPERS ═══════ */
+async function loadPapers(reset=false) {
+  if (state.papers.loading) return;
+  if (reset) { state.papers.items=[]; state.papers.offset=0; state.papers.exhausted=false; }
+  state.papers.loading = true;
+  const list = $('#papers-list');
+  if (reset) list.innerHTML = skeletonCards(3);
+
+  try {
+    const topic = state.papers.topic !== 'all' ? `&topic=${encodeURIComponent(state.papers.topic)}` : '';
+    const data = await apiFetch(
+      `/api/radar/papers?sort=${state.papers.sort}&offset=${state.papers.offset}${topic}`
+    ).catch(() => ({ items: getMockPapers(), has_more: false }));
+
+    if (reset) list.innerHTML = '';
+    data.items.forEach((item,i) => {
+      const card = buildCard(item, 'list');
+      card.style.animationDelay = `${i * 0.05}s`;
+      list.appendChild(card);
+    });
+    state.papers.items.push(...(data.items||[]));
+    state.papers.offset += (data.items||[]).length;
+    state.papers.exhausted = !data.has_more;
+    $('#papers-more').hidden = state.papers.exhausted;
+  } catch(e) { if(reset) list.innerHTML = errorCard(); }
+  finally { state.papers.loading = false; }
+}
+async function loadMorePapers() { await loadPapers(false); }
+function setPaperTopic(topic, btn) {
+  state.papers.topic = topic;
+  $$('#papers-filters .chip-btn').forEach(b => b.classList.toggle('active', b.dataset.topic === topic));
+  loadPapers(true);
+}
+function setPaperSort(sort, btn) {
+  state.papers.sort = sort;
+  $$('[id^="papers-sort-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadPapers(true);
+}
+
+/* ═══════ MODELS ═══════ */
+async function loadModels(reset=false) {
+  if (state.models.loading) return;
+  if (reset) { state.models.items=[]; state.models.offset=0; state.models.exhausted=false; }
+  state.models.loading = true;
+  const list = $('#models-list');
+  if (reset) list.innerHTML = skeletonCards(3);
+
+  try {
+    const data = await apiFetch(
+      `/api/radar/models?sort=${state.models.sort}&offset=${state.models.offset}`
+    ).catch(() => ({ items: getMockModels(), has_more: false }));
+
+    if (reset) list.innerHTML = '';
+    data.items.forEach((item,i) => {
+      const card = buildCard(item, 'list');
+      card.style.animationDelay = `${i * 0.05}s`;
+      list.appendChild(card);
+    });
+    state.models.items.push(...(data.items||[]));
+    state.models.offset += (data.items||[]).length;
+    state.models.exhausted = !data.has_more;
+    $('#models-more').hidden = state.models.exhausted;
+  } catch(e) { if(reset) list.innerHTML = errorCard(); }
+  finally { state.models.loading = false; }
+}
+async function loadMoreModels() { await loadModels(false); }
+function setModelSort(sort, btn) {
+  state.models.sort = sort;
+  $$('[id^="models-sort-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadModels(true);
+}
+
+/* ═══════ COMPANIES ═══════ */
+async function loadCompanies(reset=false) {
+  if (state.companies.loading) return;
+  if (reset) { state.companies.items=[]; state.companies.offset=0; state.companies.exhausted=false; }
+  state.companies.loading = true;
+  const list = $('#companies-list');
+  if (reset) list.innerHTML = skeletonCards(3);
+
+  try {
+    const data = await apiFetch(
+      `/api/radar/companies?sort=${state.companies.sort}&offset=${state.companies.offset}`
+    ).catch(() => ({ items: getMockCompanies(), has_more: false }));
+
+    if (reset) list.innerHTML = '';
+    data.items.forEach((item,i) => {
+      const card = buildCard(item, 'list');
+      card.style.animationDelay = `${i * 0.05}s`;
+      list.appendChild(card);
+    });
+    state.companies.items.push(...(data.items||[]));
+    state.companies.offset += (data.items||[]).length;
+    state.companies.exhausted = !data.has_more;
+    $('#companies-more').hidden = state.companies.exhausted;
+  } catch(e) { if(reset) list.innerHTML = errorCard(); }
+  finally { state.companies.loading = false; }
+}
+async function loadMoreCompanies() { await loadCompanies(false); }
+function setCoSort(sort, btn) {
+  state.companies.sort = sort;
+  $$('[id^="co-sort-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadCompanies(true);
+}
+
+/* ═══════ SAVED ═══════ */
+async function loadSaved() {
+  const list = $('#saved-list'), empty = $('#saved-empty');
+  list.innerHTML = skeletonCards(2);
+  try {
+    const data = await apiFetch('/api/radar/saved').catch(() => ({ items:[], count:0 }));
+    list.innerHTML = '';
+    const items = data.items || [];
+    $('#saved-count').textContent = `${items.length} item${items.length!==1?'s':''}`;
+    empty.hidden = items.length > 0;
+    items.forEach((si, i) => {
+      const item = si.item || si;
+      const card = buildCard(item, 'list', true);
+      card.style.animationDelay = `${i * 0.05}s`;
+      list.appendChild(card);
+    });
+    state.saved.loaded = true;
+  } catch(e) { list.innerHTML = errorCard(); }
+}
+
+/* ═══════ CARD BUILDER ═══════ */
+function buildCard(item, mode='list', isSaved=false) {
+  const card = document.createElement('div');
+  const isHero = mode === 'hero';
+  const isHigh = item.signal_label === 'High Signal';
+  card.className = `item-card${isHero?' hero':''}${isHigh&&isHero?' high-signal high-signal-ping':''}`;
+
+  const typeCls = { paper:'paper', model:'model', blog_post:'company' }[item.content_type] || 'paper';
+  const typeLabel = { paper:'Paper', model:'Model', blog_post:'Company' }[item.content_type] || 'Paper';
+
+  const srcClass = `src-${(item.source_name||'').replace(/\s+/g,'-')}`;
+  const signalClass = { 'High Signal':'high','Worth Peeling':'peel','Worth Watching':'watch','Quick Skim':'skim' }[item.signal_label] || 'skim';
+
+  const tags = (item.key_tags||[]).slice(0,3);
+  const diffCls = { Easy:'diff-easy',Intermediate:'diff-intermediate',Advanced:'diff-advanced' }[item.difficulty]||'';
+
+  // Actions
+  const isSavedNow = isSaved || state.savedIds.has(item.id);
+  let actionsHtml = '';
+  if (item.content_type === 'paper') {
+    actionsHtml += `<button class="action-btn peel-btn" onclick="peelPaper('${esc(item.arxiv_id||item.id)}',event)" title="Peel this paper">Peel this paper</button>`;
+  }
+  if (item.content_type === 'model' || item.content_type === 'blog_post') {
+    actionsHtml += `<button class="action-btn open-btn" onclick="openSource('${esc(item.source_url)}',event)">Open →</button>`;
+  }
+  actionsHtml += `
+    <button class="action-btn save-btn${isSavedNow?' saved':''}"
+      data-id="${esc(item.id)}"
+      onclick="toggleSave('${esc(item.id)}',this,event)"
+      title="${isSavedNow?'Remove from saved':'Save for later'}">
+      <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    </button>`;
+
+  // Star rating
+  const avgRating = parseFloat(item.avg_rating || 0);
+  const ratingCount = parseInt(item.rating_count || 0);
+  const ratingHtml = `
+    <div class="card-rating" data-item-id="${esc(item.id)}" title="Rate this — help the community surface what matters">
+      <div class="star-row">
+        ${[5,4,3,2,1].map(s => `<span class="star${s <= Math.round(avgRating) ? ' filled' : ''}" data-value="${s}" onclick="submitRating('${esc(item.id)}',${s},this.closest('.card-rating'))">★</span>`).join('')}
+      </div>
+      ${ratingCount > 0 ? `<span class="rating-info">${avgRating.toFixed(1)} · ${ratingCount}</span>` : '<span class="rating-info faint">Rate this</span>'}
+    </div>`;
+
+  card.innerHTML = `
+    <div class="card-meta">
+      <span class="type-badge ${typeCls}">${esc(typeLabel)}</span>
+      <span class="company-badge ${srcClass}">${esc(item.source_name||'')}</span>
+      <span class="card-time">${timeAgo(item.published_at)}</span>
+      <span class="signal-badge ${signalClass}">${esc(item.signal_label||'Quick Skim')}</span>
+    </div>
+    <div class="card-title">${esc(item.title||'')}</div>
+    ${item.summary    ? `<div class="card-summary">${esc(item.summary)}</div>`      : ''}
+    ${item.why_it_matters ? `<div class="card-why">${esc(item.why_it_matters)}</div>` : ''}
+    <div class="card-footer">
+      ${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}
+      ${item.topic ? `<span class="tag-pill">${esc(item.topic)}</span>` : ''}
+      ${item.difficulty && item.content_type==='paper' ? `<span class="tag-pill diff-pill ${diffCls}">${esc(item.difficulty)}</span>` : ''}
+      <div class="card-actions">${actionsHtml}</div>
+    </div>
+    ${ratingHtml}`;
+
+  return card;
+}
+
+/* ─ Star rating ─ */
+async function submitRating(itemId, rating, container) {
+  // Optimistic UI update first
+  const stars = container.querySelectorAll('.star');
+  stars.forEach(s => {
+    const val = parseInt(s.getAttribute('data-value'));
+    s.classList.toggle('filled', val <= rating);
+  });
+  const info = container.querySelector('.rating-info');
+  if (info) { info.textContent = `${rating}.0 · updating...`; info.classList.remove('faint'); }
+
+  if (!authToken) {
+    if (info) info.textContent = 'Sign in to rate';
+    setTimeout(() => { if (info) { info.textContent = 'Rate this'; info.classList.add('faint'); } }, 2000);
+    showToast('Sign in to rate items and help the community 🔬');
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/radar/rate/${itemId}`, 'POST', { rating });
+    if (res && res.avg_rating !== undefined) {
+      const filled = Math.round(res.avg_rating);
+      stars.forEach(s => {
+        const val = parseInt(s.getAttribute('data-value'));
+        s.classList.toggle('filled', val <= filled);
+      });
+      if (info) { info.textContent = `${res.avg_rating.toFixed(1)} · ${res.rating_count}`; }
+      showToast('Rated! Your signal helps the community 🔬');
+    }
+  } catch(e) {
+    console.warn('Rating failed', e);
+    if (info) { info.textContent = 'Rate this'; info.classList.add('faint'); }
+  }
+}
+
+/* ─ Card actions ─ */
+function peelPaper(id, e) {
+  e.stopPropagation();
+  window.location.href = `peeler.html?id=${encodeURIComponent(id)}`;
+}
+function openSource(url, e) {
+  e.stopPropagation();
+  if (!url || url === '#' || url === 'undefined' || url === 'null') {
+    toast('Source link not available');
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+}
+async function toggleSave(id, btn, e) {
+  e.stopPropagation();
+  const saving = !btn.classList.contains('saved');
+  btn.classList.add('capturing');
+  btn.addEventListener('animationend', () => btn.classList.remove('capturing'), {once:true});
+
+  try {
+    if (saving) {
+      await apiFetch(`/api/radar/save/${id}`, 'POST').catch(()=>{});
+      btn.classList.add('saved');
+      btn.title = 'Remove from saved';
+      state.savedIds.add(id);
+      toast('Captured in lens ·');
+    } else {
+      await apiFetch(`/api/radar/save/${id}`, 'DELETE').catch(()=>{});
+      btn.classList.remove('saved');
+      btn.title = 'Save for later';
+      state.savedIds.delete(id);
+      toast('Removed from queue');
+    }
+    // Invalidate saved cache
+    state.saved.loaded = false;
+  } catch(err) { toast('Action failed. Please try again.'); }
+}
+
+/* ─ Helpers ─ */
+function skeletonCards(n) {
+  return Array.from({length:n}, () =>
+    `<div class="sk-card"><div class="skl" style="width:30%;height:10px;margin-bottom:12px"></div><div class="skl" style="width:86%"></div><div class="skl" style="width:68%;margin-bottom:10px"></div><div class="skl" style="width:44%;height:10px"></div></div>`
+  ).join('');
+}
+function errorCard() {
+  return `<div style="padding:24px;color:var(--faint);font-size:13px;text-align:center">Could not load items. Check your connection.</div>`;
+}
+
+/* ═══════ EMAIL OTP FLOW ═══════ */
+let otpStep = 'email'; // 'email' | 'verify' | 'done'
+
+function openEmailDrawer() { $('#email-overlay').classList.add('open'); }
+function closeEmailDrawer() { $('#email-overlay').classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target === $('#email-overlay')) closeEmailDrawer(); }
+
+function setOtpStep(step) {
+  otpStep = step;
+  $('#otp-state').dataset.step = step;
+  const btn = $('#otp-action-btn');
+  if (step === 'email')  { btn.textContent = 'Send verification code'; btn.disabled = false; }
+  if (step === 'verify') { btn.textContent = 'Verify code'; btn.disabled = false; }
+  if (step === 'done')   { $('#otp-action-wrap').hidden = true; $('#mail-btn').classList.add('connected'); $('#mail-btn').title = 'Daily digest connected'; }
+}
+
+function otpInput(inp) {
+  inp.value = inp.value.replace(/\D/g,'').slice(-1);
+  const idx = parseInt(inp.dataset.idx);
+  if (inp.value && idx < 5) {
+    $('#otp-digits').children[idx+1].focus();
+  }
+  // Auto-verify when all 6 filled
+  const code = [...$('#otp-digits').children].map(d=>d.value).join('');
+  if (code.length === 6) otpAction();
+}
+function otpKey(e, inp) {
+  const idx = parseInt(inp.dataset.idx);
+  if (e.key === 'Backspace' && !inp.value && idx > 0) {
+    $('#otp-digits').children[idx-1].focus();
+  }
+}
+
+async function sendOTP(isResend=false) {
+  const email = $('#otp-email').value.trim();
+  if (!email || !email.includes('@')) { toast('Enter a valid email address'); return; }
+  const btn = $('#otp-action-btn'); btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    await apiFetch('/api/radar/email/send-otp', 'POST', { email }).catch(()=>{});
+    setOtpStep('verify');
+    toast(isResend ? 'New code sent' : `Code sent to ${email}`);
+    setTimeout(() => $('#otp-digits').children[0].focus(), 100);
+  } catch(e) {
+    toast('Failed to send code. Try again.');
+    btn.disabled = false; btn.textContent = 'Send verification code';
+  }
+}
+
+async function verifyOTP() {
+  const email = $('#otp-email').value.trim();
+  const code  = [...$('#otp-digits').children].map(d=>d.value).join('');
+  if (code.length < 6) { toast('Enter the 6-digit code'); return; }
+  const btn = $('#otp-action-btn'); btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    await apiFetch('/api/radar/email/verify-otp', 'POST', { email, otp: code }).catch(()=>{});
+    $('#success-email').textContent = email;
+    setOtpStep('done');
+    toast('Daily digest enabled ✓');
+  } catch(e) {
+    toast('Incorrect code. Try again.');
+    btn.disabled = false; btn.textContent = 'Verify code';
+    [...$('#otp-digits').children].forEach(d => d.value = '');
+    $('#otp-digits').children[0].focus();
+  }
+}
+
+function otpAction() {
+  if (otpStep === 'email')  sendOTP();
+  if (otpStep === 'verify') verifyOTP();
+}
+
+/* ═══════ MOCK DATA (API fallback for dev) ═══════ */
+function getMockStats() {
+  return {
+    scanned: 42,
+    signal: 12,
+    by_type: {
+      paper: 28,
+      model: 8,
+      blog_post: 6
+    }
+  };
+}
+
+function getMockBrief() {
+  return {
+    date_label: 'Today, ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}),
+    total: 10,
+    papers: [
+      { id:'p1', content_type:'paper', title:'Scaling Reasoning in Language Models with Efficient Chain-of-Thought Distillation', summary:'Proposes a distillation framework that transfers chain-of-thought reasoning from large models to smaller ones without quality loss. The 7B student matches 70B teacher on GSM8K at 9.8× faster inference.', why_it_matters:'Makes advanced reasoning accessible on consumer hardware — critical for on-device AI.', source_name:'arXiv', published_at:new Date(Date.now()-7200000).toISOString(), signal_label:'High Signal', key_tags:['reasoning','efficient','benchmark'], topic:'LLMs', difficulty:'Intermediate', has_peeler:true, arxiv_id:'2301.00001' },
+      { id:'p2', content_type:'paper', title:'DiffusionDet v2: Real-time Object Detection via Denoising Diffusion', summary:'Faster inference pipeline for detection tasks using denoising diffusion. Achieves 42 FPS on standard hardware while maintaining SOTA accuracy on COCO val2017.', why_it_matters:'Bridges the gap between diffusion quality and real-time deployment requirements.', source_name:'arXiv', published_at:new Date(Date.now()-18000000).toISOString(), signal_label:'Worth Peeling', key_tags:['benchmark','architecture','efficient'], topic:'Computer Vision', difficulty:'Advanced', has_peeler:true, arxiv_id:'2301.00002' },
+      { id:'p3', content_type:'paper', title:'RLVR: Reinforcement Learning from Verifiable Rewards', summary:'A new RL framework where rewards come from verifiable outcomes rather than human feedback. Strong results on math, code, and logical reasoning without reward hacking.', why_it_matters:'Removes dependency on human reward models — reduces RLHF cost by 70%.', source_name:'arXiv', published_at:new Date(Date.now()-28800000).toISOString(), signal_label:'High Signal', key_tags:['reasoning','alignment','benchmark'], topic:'RL / Agents', difficulty:'Advanced', has_peeler:true, arxiv_id:'2301.00003' },
+    ],
+    models: [
+      { id:'m1', content_type:'model', title:'mistralai/Mistral-Small-3.1', summary:'Updated small model with 128k context window and improved instruction following. Released under Apache 2.0 license.', why_it_matters:'Strong open-source baseline for instruction tasks — fully commercial-friendly.', source_name:'HuggingFace', published_at:new Date(Date.now()-21600000).toISOString(), signal_label:'Worth Watching', key_tags:['open-source','efficient'], topic:'LLMs', has_peeler:false, source_url:'https://huggingface.co/mistralai/Mistral-Small-3.1' },
+    ],
+    company_updates: [
+      { id:'c1', content_type:'blog_post', title:'Gemini 2.5 Pro achieves new state-of-the-art on math benchmarks', summary:'Google announces improvements in mathematical reasoning, surpassing previous models on MATH-500 and AIME by wide margins.', why_it_matters:'Sets new baseline for academic math — relevant for science and engineering LLM applications.', source_name:'Google DeepMind', published_at:new Date(Date.now()-14400000).toISOString(), signal_label:'High Signal', key_tags:['benchmark','state-of-the-art'], topic:'LLMs', has_peeler:false, source_url:'https://deepmind.google/discover/blog/' },
+      { id:'c2', content_type:'blog_post', title:'GPT-4o achieves top scores on agentic coding benchmarks', summary:'OpenAI publishes new evaluation results showing GPT-4o leading on SWE-bench Verified. New tool use capabilities detailed in technical report.', why_it_matters:'Best-in-class coding benchmark — signals when to upgrade from GPT-3.5 Turbo for agentic tasks.', source_name:'OpenAI', published_at:new Date(Date.now()-36000000).toISOString(), signal_label:'Worth Watching', key_tags:['agent','benchmark'], topic:'LLMs', has_peeler:false, source_url:'https://openai.com/news/' },
+    ],
+  };
+}
+
+function getMockPapers() {
+  return getMockBrief().papers.concat([
+    { id:'p4', content_type:'paper', title:'MoE-LLaVA: Mixture of Experts for Large Vision-Language Models', summary:'Applies mixture-of-experts to multimodal models, reducing compute cost while maintaining VQA benchmark performance.', why_it_matters:'MoE drastically cuts inference cost — enabling GPT-4V-level multimodal at fraction of cost.', source_name:'arXiv', published_at:new Date(Date.now()-43200000).toISOString(), signal_label:'Worth Peeling', key_tags:['multimodal','efficient','architecture'], topic:'Multimodal', difficulty:'Intermediate', has_peeler:true, arxiv_id:'2301.00004' },
+    { id:'p5', content_type:'paper', title:'Constitutional AI 2.0: Principles-Based Alignment at Scale', summary:'Extended framework for training AI systems to follow natural language principles. Outperforms RLHF on helpfulness while reducing harmful outputs by 42%.', why_it_matters:'Practical alignment technique that removes need for human preference data collection.', source_name:'arXiv', published_at:new Date(Date.now()-50400000).toISOString(), signal_label:'Worth Watching', key_tags:['alignment','safety'], topic:'AI Safety', difficulty:'Intermediate', has_peeler:true, arxiv_id:'2301.00005' },
+  ]);
+}
+
+function getMockModels() {
+  return [
+    { id:'m1', content_type:'model', title:'mistralai/Mistral-Small-3.1', summary:'Updated 24B parameter model with 128k context window. Instruction-following improvements over previous version.', why_it_matters:'Best open-weight model in this parameter range for instruction tasks.', source_name:'HuggingFace', published_at:new Date(Date.now()-21600000).toISOString(), signal_label:'Worth Watching', key_tags:['open-source'], topic:'LLMs', has_peeler:false, source_url:'https://huggingface.co/mistralai/Mistral-Small-3.1' },
+    { id:'m2', content_type:'model', title:'meta-llama/Llama-4-Scout', summary:'17B active parameters from 109B total using mixture-of-experts. Outperforms Llama 3.1 on most benchmarks with lower inference cost.', why_it_matters:'MoE efficiency means you get 70B+ quality at 17B inference cost.', source_name:'HuggingFace', published_at:new Date(Date.now()-50400000).toISOString(), signal_label:'High Signal', key_tags:['open-source','efficient','architecture'], topic:'LLMs', has_peeler:false, source_url:'https://huggingface.co/meta-llama/Llama-4-Scout' },
+    { id:'m3', content_type:'model', title:'google/gemma-3-12b-it', summary:'Instruction-tuned 12B Gemma model. Supports 128k context and excels at coding and reasoning tasks.', why_it_matters:'Google\'s answer to open-weight competition — strong 12B with long context.', source_name:'HuggingFace', published_at:new Date(Date.now()-72000000).toISOString(), signal_label:'Worth Watching', key_tags:['open-source'], topic:'LLMs', has_peeler:false, source_url:'https://huggingface.co/google/gemma-3-12b-it' },
+  ];
+}
+
+function getMockCompanies() {
+  return getMockBrief().company_updates.concat([
+    { id:'c3', content_type:'blog_post', title:'Anthropic publishes detailed safety evaluation methodology for Claude 3.7', summary:'Detailed technical report on the red-teaming processes, evaluation benchmarks, and mitigation strategies for Claude 3.7 family.', why_it_matters:'Most transparent safety methodology published to date — sets new industry standard.', source_name:'Anthropic', published_at:new Date(Date.now()-57600000).toISOString(), signal_label:'Worth Watching', key_tags:['safety','alignment'], topic:'AI Safety', has_peeler:false, source_url:'https://www.anthropic.com/news' },
+    { id:'c4', content_type:'blog_post', title:'Meta AI releases Segment Anything Model 2.1 with video support', summary:'SAM 2.1 extends segmentation to video, supporting real-time tracking at 44 FPS. Open weights with Apache 2.0 license.', why_it_matters:'Video segmentation was the missing piece for production robotics and video editing.', source_name:'Meta AI', published_at:new Date(Date.now()-86400000).toISOString(), signal_label:'Worth Watching', key_tags:['open-source','efficient'], topic:'Computer Vision', has_peeler:false, source_url:'https://ai.meta.com/blog/' },
+  ]);
+}
+
+/* ═══════════════════════════════════════════
+   THREE.JS — KNOWLEDGE CONSTELLATION (Home)
+   A 3D constellation of glowing nodes — papers,
+   models, companies — connected by faint lines.
+   Light pulses travel along the edges, like
+   signals propagating through a research network.
+   Slow camera orbit. Fills the entire viewport.
+   ═══════════════════════════════════════════ */
+async function initResearchOrrery() {
+  try {
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js');
+    const canvas = document.getElementById('radarHomeCanvas');
+    if (!canvas) return;
+    const W = () => window.innerWidth;
+    const H = () => window.innerHeight;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(W(), H(), false);
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(46, W() / H(), 0.1, 200);
+    camera.position.set(3.4, 5.8, 12.5);
+    camera.lookAt(0, 0, 0);
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    // Radar coordinate space base group (XZ plane is flat reference)
+    const radarGroup = new THREE.Group();
+    // Slightly tilt the entire radar group to optimize 3D layout perspective
+    radarGroup.rotation.x = -Math.PI / 18; // slight 10 degree tilt
+    radarGroup.position.set(3.4, -0.2, 0);
+    radarGroup.scale.setScalar(1.24);
+    root.add(radarGroup);
+
+    // Color constants matching PaperLens
+    const COLOR_BLUE = 0xa8c4f0;
+    const COLOR_GOLD = 0xf5e6cc;
+
+    /* ── 1. Create Polar Reference Grid (Concentric Circles) ── */
+    function createCircleLine(radius, color, opacity) {
+      const points = [];
+      const segments = 64;
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        points.push(new THREE.Vector3(Math.cos(theta) * radius, 0, Math.sin(theta) * radius));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+      return new THREE.Line(geo, mat);
+    }
+
+    // Add 4 concentric rings
+    const ringRadii = [1.6, 3.2, 4.8, 6.4];
+    ringRadii.forEach((r, idx) => {
+      // Outer ring is slightly brighter, inner ones are faint
+      const opacity = idx === 3 ? 0.16 : 0.07;
+      const ring = createCircleLine(r, COLOR_BLUE, opacity);
+      radarGroup.add(ring);
+    });
+
+    // Add 8 radial division axes lines
+    const radialAngles = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4];
+    radialAngles.forEach(angle => {
+      const x = Math.cos(angle) * 6.7;
+      const z = Math.sin(angle) * 6.7;
+      const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, 0, z)];
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const mat = new THREE.LineBasicMaterial({ color: COLOR_BLUE, transparent: true, opacity: 0.06 });
+      const line = new THREE.Line(geo, mat);
+      radarGroup.add(line);
+    });
+
+    /* ── Lens core: subtle PaperLens eye at the center of the research field ── */
+    const coreGroup = new THREE.Group();
+    radarGroup.add(coreGroup);
+
+    const coreRingGeo = new THREE.TorusGeometry(0.42, 0.012, 8, 96);
+    const coreRingMat = new THREE.MeshBasicMaterial({ color: COLOR_BLUE, transparent: true, opacity: 0.34 });
+    const coreRing = new THREE.Mesh(coreRingGeo, coreRingMat);
+    coreRing.rotation.x = Math.PI / 2;
+    coreGroup.add(coreRing);
+
+    const outerLensGeo = new THREE.TorusGeometry(0.72, 0.008, 8, 112);
+    const outerLensMat = new THREE.MeshBasicMaterial({ color: COLOR_GOLD, transparent: true, opacity: 0.16 });
+    const outerLens = new THREE.Mesh(outerLensGeo, outerLensMat);
+    outerLens.rotation.x = Math.PI / 2;
+    coreGroup.add(outerLens);
+
+    const pupilGeo = new THREE.SphereGeometry(0.075, 18, 18);
+    const pupilMat = new THREE.MeshBasicMaterial({ color: COLOR_BLUE, transparent: true, opacity: 0.62 });
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.y = 0.035;
+    coreGroup.add(pupil);
+
+    /* ── 2. Rotating Phosphor Sweep Beam & Volumetric Sector ── */
+    const sweepGroup = new THREE.Group();
+    radarGroup.add(sweepGroup);
+
+    // Solid glowing leading line
+    const leadPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(6.6, 0, 0)];
+    const leadGeo = new THREE.BufferGeometry().setFromPoints(leadPts);
+    const leadMat = new THREE.LineBasicMaterial({ color: COLOR_BLUE, transparent: true, opacity: 0.72 });
+    const leadLine = new THREE.Line(leadGeo, leadMat);
+    sweepGroup.add(leadLine);
+
+    // Volumetric flat wedge/cone sweep area
+    const wedgeGeo = new THREE.RingGeometry(0, 6.6, 28, 1, -0.33, 0.33);
+    wedgeGeo.rotateX(-Math.PI / 2); // Lay it flat on XZ plane
+    const wedgeMat = new THREE.MeshBasicMaterial({
+      color: COLOR_BLUE,
+      transparent: true,
+      opacity: 0.052,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const wedge = new THREE.Mesh(wedgeGeo, wedgeMat);
+    sweepGroup.add(wedge);
+
+    // Multi-line trailing lines (decaying phosphor trail)
+    const TRAIL_COUNT = 24;
+    const trailLines = [];
+    for (let i = 1; i <= TRAIL_COUNT; i++) {
+      const angle = -i * 0.015; // rotated behind the leader
+      const x = Math.cos(angle) * 6.6;
+      const z = Math.sin(angle) * 6.6;
+      const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, 0, z)];
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+
+      // Decaying trail opacities
+      const opacity = 0.42 * Math.pow(1 - i / TRAIL_COUNT, 2.0);
+      const mat = new THREE.LineBasicMaterial({ color: COLOR_BLUE, transparent: true, opacity });
+      const line = new THREE.Line(geo, mat);
+      sweepGroup.add(line);
+      trailLines.push(line);
+    }
+
+    /* ── Helper for canvas-drawn monospace text sprites ── */
+    function createTextSprite(text, colorHex) {
+      const canvasText = document.createElement('canvas');
+      canvasText.width = 128;
+      canvasText.height = 64;
+      const ctx = canvasText.getContext('2d');
+      ctx.clearRect(0, 0, 128, 64);
+
+      // Minimalist HUD text styling
+      ctx.font = 'bold 20px monospace';
+      ctx.fillStyle = `#${colorHex.toString(16).padStart(6, '0')}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      // Subtle shadow for glow effect
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 3;
+      ctx.fillText(text, 10, 32);
+
+      const texture = new THREE.CanvasTexture(canvasText);
+      texture.minFilter = THREE.LinearFilter;
+      const matSprite = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.03, // start faint
+        depthWrite: false
+      });
+      return new THREE.Sprite(matSprite);
+    }
+
+    /* ── 3. Generate Research Target Nodes (Blips) ── */
+    const nodes = [];
+    const NODE_COUNT = 28;
+
+    // Geometries representing actual research objects:
+    const paperGeo = new THREE.BoxGeometry(0.12, 0.16, 0.03);  // Daily News / Papers = flat booklets
+    const modelGeo = new THREE.OctahedronGeometry(0.09, 0);   // Models = wireframe octahedrons
+    const companyGeo = new THREE.TorusGeometry(0.07, 0.024, 8, 24); // Company Blogs = glowing wireframe rings/tori
+
+    for (let i = 0; i < NODE_COUNT; i++) {
+      // Polar coordinates on XZ plane
+      const radius = 1.0 + Math.pow(Math.random(), 0.9) * 5.35;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 1.8; // Vertical height offset (-0.9 to 0.9)
+
+      // Randomize classifications and tag prefixes
+      let type = 'paper';
+      let geo = paperGeo;
+      let tagPrefix = 'NEWS';
+      let color = COLOR_BLUE;
+      const rVal = Math.random();
+
+      if (rVal < 0.28) {
+        type = 'model';
+        geo = modelGeo;
+        tagPrefix = Math.random() < 0.5 ? 'MODEL' : 'LLM';
+        if (Math.random() < 0.4) color = COLOR_GOLD; // some model hubs are cream-gold
+      } else if (rVal < 0.42) {
+        type = 'company';
+        geo = companyGeo;
+        tagPrefix = Math.random() < 0.5 ? 'BLOG' : 'LAB';
+      } else {
+        type = 'paper';
+        geo = paperGeo;
+        tagPrefix = Math.random() < 0.5 ? 'NEWS' : 'PAPER';
+      }
+
+      const tag = `${tagPrefix}-${String(Math.floor(Math.random() * 90) + 10)}`;
+
+      // Calculate absolute 3D position
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const pos = new THREE.Vector3(x, height, z);
+
+      // Node mesh
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.2,
+        wireframe: true
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      radarGroup.add(mesh);
+
+      // Dash Drop line to reference plane
+      const dropPts = [new THREE.Vector3(x, 0, z), new THREE.Vector3(x, height, z)];
+      const dropGeo = new THREE.BufferGeometry().setFromPoints(dropPts);
+      const dropMat = new THREE.LineBasicMaterial({
+        color: COLOR_BLUE,
+        transparent: true,
+        opacity: 0.08
+      });
+      const dropLine = new THREE.Line(dropGeo, dropMat);
+      radarGroup.add(dropLine);
+
+      // Dynamic flat expanding ripple mesh
+      const rippleGeo = new THREE.RingGeometry(0, 0.4, 32, 1);
+      rippleGeo.rotateX(-Math.PI / 2);
+      const rippleMat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const rippleMesh = new THREE.Mesh(rippleGeo, rippleMat);
+      rippleMesh.position.set(x, 0, z);
+      radarGroup.add(rippleMesh);
+
+      // Monospace designation label sprite
+      const tagSprite = createTextSprite(tag, color);
+      tagSprite.position.set(x + 0.18, height + 0.1, z);
+      tagSprite.scale.set(0.6, 0.3, 1.0);
+      radarGroup.add(tagSprite);
+
+      nodes.push({
+        radius,
+        angle,
+        height,
+        type,
+        tag,
+        color,
+        phase: Math.random() * Math.PI * 2,
+        mesh,
+        dropLine,
+        rippleMesh,
+        tagSprite,
+        brightness: 0.05,
+        pinged: false
+      });
+    }
+
+    /* ── 4. Connecting Faint Conceptual Links ── */
+    const maxLinkDist = 2.4;
+    const connections = [];
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const d = nodes[i].mesh.position.distanceTo(nodes[j].mesh.position);
+        if (d < maxLinkDist) {
+          const linePts = [nodes[i].mesh.position, nodes[j].mesh.position];
+          const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+          const lineMat = new THREE.LineBasicMaterial({
+            color: COLOR_BLUE,
+            transparent: true,
+            opacity: 0.02
+          });
+          const line = new THREE.Line(lineGeo, lineMat);
+          radarGroup.add(line);
+          connections.push({ i, j, line, mat: lineMat });
+        }
+      }
+    }
+
+    let t = 0;
+    let sweepAngle = 0;
+
+    (function animate() {
+      requestAnimationFrame(animate);
+      if (getComputedStyle(canvas).display === 'none') return;
+      t++;
+
+      // Slow elegant rotation of coordinates
+      root.rotation.y = t * 0.0004;
+      coreGroup.rotation.y = t * 0.006;
+      coreRing.material.opacity = 0.28 + Math.sin(t * 0.025) * 0.08;
+      outerLens.material.opacity = 0.12 + Math.cos(t * 0.018) * 0.045;
+      pupil.scale.setScalar(1 + Math.sin(t * 0.035) * 0.16);
+
+      // Clockwise sweep rotation (traditional radar screen)
+      sweepAngle = (sweepAngle + 0.007) % (Math.PI * 2);
+      sweepGroup.rotation.y = -sweepAngle;
+
+      const currentSweepLeadingAngle = (Math.PI * 2 - sweepAngle) % (Math.PI * 2);
+
+      // Update nodes (float & sweep interactions)
+      nodes.forEach(node => {
+        // Slow float/drift simulation
+        const drift = Math.sin(t * 0.012 + node.phase) * 0.1;
+        node.mesh.position.y = node.height + drift;
+        node.tagSprite.position.y = node.height + drift + 0.1;
+
+        // Keep drop line attached
+        const posAttr = node.dropLine.geometry.attributes.position;
+        posAttr.setY(1, node.height + drift);
+        posAttr.needsUpdate = true;
+
+        // Intersection calculation
+        let diff = (node.angle - currentSweepLeadingAngle) % (Math.PI * 2);
+        if (diff < 0) diff += Math.PI * 2;
+
+        // Sweep intersection detection (leading scan front)
+        if (diff < 0.12) {
+          if (!node.pinged) {
+            node.pinged = true;
+            node.brightness = 1.0;
+
+            // Trigger ripple mesh animation at ground intersection
+            node.rippleMesh.scale.setScalar(0.4);
+            node.rippleMesh.material.opacity = 0.78;
+          }
+        } else if (diff > 0.4) {
+          node.pinged = false; // Reset trigger so it pings on next sweep
+        }
+
+        // Phosphor decay logic
+        node.brightness += (0.08 - node.brightness) * 0.035; // decay back to base dim ambient opacity
+        node.mesh.material.opacity = 0.2 + node.brightness * 0.78;
+        node.tagSprite.material.opacity = 0.03 + node.brightness * 0.85;
+
+        // Subtle target scale pulse
+        const scaleVal = 1.0 + node.brightness * 0.75;
+        node.mesh.scale.setScalar(scaleVal);
+
+        // Flash target white at peak
+        if (node.brightness > 0.4) {
+          node.mesh.material.color.setHex(0xffffff);
+        } else {
+          node.mesh.material.color.setHex(node.color);
+        }
+
+        // Ripple expansion
+        if (node.rippleMesh.material.opacity > 0.01) {
+          node.rippleMesh.scale.addScalar(0.04);
+          node.rippleMesh.material.opacity *= 0.93;
+        } else {
+          node.rippleMesh.material.opacity = 0.0;
+        }
+      });
+
+      // Update conceptual connection line vertices & brightness
+      connections.forEach(c => {
+        const p1 = nodes[c.i].mesh.position;
+        const p2 = nodes[c.j].mesh.position;
+        const posAttr = c.line.geometry.attributes.position;
+        posAttr.setXYZ(0, p1.x, p1.y, p1.z);
+        posAttr.setXYZ(1, p2.x, p2.y, p2.z);
+        posAttr.needsUpdate = true;
+
+        // Highlight linking edge based on average endpoint node sweep brightness
+        const avgBrightness = (nodes[c.i].brightness + nodes[c.j].brightness) * 0.5;
+        c.mat.opacity = 0.02 + avgBrightness * 0.15;
+      });
+
+      // Camera floating motion
+      camera.position.x = 3.4 + Math.sin(t * 0.00015) * 0.55;
+      camera.position.y = 6.0 + Math.cos(t * 0.00012) * 0.4;
+      camera.position.z = 12.5 + Math.sin(t * 0.00008) * 0.55;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    })();
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(W(), H(), false);
+      camera.aspect = W() / H();
+      camera.updateProjectionMatrix();
+    });
+  } catch(e) {
+    console.error('Three.js initialization error:', e);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   THREE.JS — SECTION DATA STREAM
+   Warm directional particle drift — common background
+   for Brief / Papers / Models / Companies / Saved.
+   Distinct from Peeler's blue citation network.
+   ═══════════════════════════════════════════ */
+async function initSectionStream() {
+  try {
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js');
+    const canvas = document.getElementById('radarSectionCanvas');
+    if (!canvas) return;
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:false });
+    renderer.setPixelRatio(1);
+    renderer.setSize(W(), H());
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, W()/H(), 1, 2000);
+    camera.position.z = 420;
+
+    const COUNT   = 110;
+    const SPREAD_X = 480, SPREAD_Y = 340;
+    const pos   = new Float32Array(COUNT * 3);
+    const spd   = new Float32Array(COUNT * 2);
+
+    for (let i = 0; i < COUNT; i++) {
+      pos[i*3]   = (Math.random() - 0.5) * SPREAD_X;
+      pos[i*3+1] = (Math.random() - 0.5) * SPREAD_Y;
+      pos[i*3+2] = (Math.random() - 0.5) * 60;
+      spd[i*2]   =  0.08 + Math.random() * 0.14; // drift rightward, slow
+      spd[i*2+1] = -0.015 + Math.random() * 0.03;
+    }
+
+    const ptGeo = new THREE.BufferGeometry();
+    ptGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    // Tiny size + no sizeAttenuation to avoid the giant-square bug
+    scene.add(new THREE.Points(ptGeo,
+      new THREE.PointsMaterial({ color:0xa8c4f0, size:1.4, transparent:true, opacity:0.22, sizeAttenuation:false })
+    ));
+
+    /* Sparse connection lines — very faint */
+    const MAX_SEGS = 40;
+    const lineBuf  = new Float32Array(MAX_SEGS * 6);
+    const lineGeo  = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(lineBuf, 3));
+    lineGeo.setDrawRange(0, 0);
+    const lineSegs = new THREE.LineSegments(lineGeo,
+      new THREE.LineBasicMaterial({ color:0xa8c4f0, transparent:true, opacity:0.04 })
+    );
+    scene.add(lineSegs);
+
+    const THRESH = 60;
+
+    (function animate() {
+      requestAnimationFrame(animate);
+      if (getComputedStyle(canvas).display === 'none') return;
+
+      for (let i = 0; i < COUNT; i++) {
+        pos[i*3]   += spd[i*2];
+        pos[i*3+1] += spd[i*2+1];
+        if (pos[i*3]   >  SPREAD_X/2) pos[i*3]   = -SPREAD_X/2;
+        if (pos[i*3]   < -SPREAD_X/2) pos[i*3]   =  SPREAD_X/2;
+        if (pos[i*3+1] >  SPREAD_Y/2) pos[i*3+1] = -SPREAD_Y/2;
+        if (pos[i*3+1] < -SPREAD_Y/2) pos[i*3+1] =  SPREAD_Y/2;
+      }
+      ptGeo.attributes.position.needsUpdate = true;
+
+      let segs = 0;
+      for (let i = 0; i < COUNT && segs < MAX_SEGS; i++) {
+        for (let j = i+1; j < COUNT && segs < MAX_SEGS; j++) {
+          const dx = pos[i*3]-pos[j*3], dy = pos[i*3+1]-pos[j*3+1];
+          if (dx*dx + dy*dy < THRESH*THRESH) {
+            lineBuf[segs*6]   = pos[i*3];   lineBuf[segs*6+1] = pos[i*3+1]; lineBuf[segs*6+2] = pos[i*3+2];
+            lineBuf[segs*6+3] = pos[j*3];   lineBuf[segs*6+4] = pos[j*3+1]; lineBuf[segs*6+5] = pos[j*3+2];
+            segs++;
+          }
+        }
+      }
+      lineGeo.attributes.position.needsUpdate = true;
+      lineGeo.setDrawRange(0, segs * 2);
+
+      renderer.render(scene, camera);
+    })();
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(W(), H());
+      camera.aspect = W() / H();
+      camera.updateProjectionMatrix();
+    });
+  } catch(e) { /* Three.js unavailable */ }
+}
+
+/* ═══════ INIT ═══════ */
+document.addEventListener('DOMContentLoaded', () => {
+  initAuth();
+  initResearchOrrery();
+  initSectionStream();
+});
+</script>
+</body>
+</html>

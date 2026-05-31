@@ -1,6 +1,111 @@
 (function () {
   const api = window.PaperLensAPI;
 
+  /* ── Demo mode: pre-built AIAYN peel (no API call, no credits) ── */
+  function getDemoThreadData() {
+    return {
+      thread: { thread_id: 'demo-thread-aiayn', paper_id: 'arxiv:1706.03762', title: 'Attention Is All You Need' },
+      paper: {
+        canonical_id: 'arxiv:1706.03762', source_type: 'arxiv',
+        title: 'Attention Is All You Need',
+        authors: ['Ashish Vaswani', 'Noam Shazeer', 'Niki Parmar', 'Jakob Uszkoreit'],
+        abstract: 'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. On WMT 2014 English-to-German translation, the big Transformer outperforms all previously published models by more than 2 BLEU.',
+        arxiv_id: '1706.03762', published_at: '2017-06-12', topic: 'LLMs', difficulty: 'Intermediate', confidence: 'high'
+      },
+      peel: {
+        paper_id: 'arxiv:1706.03762', schema_version: '1.0', model_used: 'demo-cached', completed_from_cache: true,
+        sections: {
+          what: { title: 'What this paper does', confidence: 'high', body: 'The Transformer (Vaswani et al., 2017) is a sequence-to-sequence model that completely removes recurrence and convolution, relying entirely on attention mechanisms.\n\nBefore this paper, state-of-the-art models used RNNs/LSTMs which process tokens sequentially — slow to train and hard to parallelize. The Transformer computes attention over all positions simultaneously using Scaled Dot-Product Attention.\n\nThe architecture has an Encoder (6 layers) and Decoder (6 layers). Each layer has Multi-Head Self-Attention + Position-wise Feed-Forward Network, with residual connections and layer normalization. Positional encodings (sine/cosine) are added to embeddings so the model knows token order.\n\nResults: 28.4 BLEU on WMT 2014 EN-DE, 41.0 BLEU on EN-FR. Trained in 12h on 8 P100 GPUs — dramatically faster than prior models.', evidence: [{label:'Abstract', text:'a new simple network architecture, the Transformer, based solely on attention mechanisms', location:'Abstract'}] },
+          timeline: { title: 'What came before', confidence: 'high', body: 'Seq2Seq (Sutskever et al., 2014) showed LSTM encoder-decoders could translate sentences. Attention (Bahdanau et al., 2015) improved this by letting the decoder attend to all encoder states. ConvS2S (Gehring et al., 2017) used CNNs for parallelization but had limited receptive field for long-range dependencies.\n\nThe key limitation: RNNs have O(n) sequential operations — you cannot parallelize across time steps. Training a 6-layer LSTM on 12M sentences takes days.\n\nWhich is precisely where this paper enters.', evidence: [{label:'Introduction', text:'Recurrent neural networks have been firmly established as state of the art in sequence modeling', location:'Introduction'}] },
+          fixes: { title: 'What this paper fixes', confidence: 'high', body: 'The fundamental fix: replace sequential computation with parallel attention. The Transformer uses O(1) sequential operations instead of O(n) for RNNs.\n\nMulti-Head Attention directly models relationships between any two positions in O(1) layers. RNNs need O(n) layers for long-range dependencies. Running 8 parallel attention heads captures different relationship types simultaneously.', evidence: [{label:'Model', text:'Multi-head attention allows the model to jointly attend to information from different representation subspaces', location:'Section 3.2'}] },
+          architecture: { title: 'How the architecture works', confidence: 'high', body: 'Input tokens → embeddings + positional encoding → Encoder (6×[Self-Attention + FFN]) → Decoder (6×[Masked Self-Attention + Cross-Attention + FFN]) → Linear + Softmax.\n\nScaled Dot-Product Attention: Attention(Q,K,V) = softmax(QK^T/√d_k)V. Multi-Head runs 8 of these in parallel on projected Q,K,V subspaces, concatenates, projects back.\n\nPosition-wise FFN: FFN(x) = max(0,xW₁+b₁)W₂+b₂ — d_model=512, d_ff=2048. Residual + LayerNorm wraps each sub-layer.', evidence: [{label:'Section 3', text:'The encoder maps an input sequence to a sequence of continuous representations', location:'Section 3'}] },
+          results: { title: 'Results and benchmarks', confidence: 'high', body: 'WMT 2014 EN-DE: 28.4 BLEU (+2 over prior SOTA). WMT 2014 EN-FR: 41.0 BLEU (new single-model record). Training: 3.5 days on 8 P100 GPUs — 3.3×10^18 FLOPs, less than prior SOTA. Ablations: reducing heads from 8→1 costs 0.9 BLEU; reducing d_k hurts; larger models consistently better.', evidence: [{label:'Results', text:'outperforms the best previously reported models by more than 2.0 BLEU', location:'Section 6'}] },
+          verdict: { title: 'Should you care', confidence: 'high', body: 'YES — this is the foundation of all modern AI. GPT, BERT, T5, LLaMA, Gemini, Claude — all Transformers. If you do AI/ML, NLP, vision, or protein folding, this is required reading.\n\nLimitation: O(n²) memory/compute in sequence length. Addressed by efficient attention variants (Longformer, FlashAttention). Not ideal for very long sequences without modifications.', evidence: [{label:'Conclusion', text:'the first sequence transduction model based entirely on attention', location:'Conclusion'}] }
+        },
+        architecture: {
+          nodes: [
+            {id:'input_embed', label:'Input Embedding + Positional Encoding', type:'input'},
+            {id:'encoder', label:'Encoder Stack (N=6 layers)', type:'module'},
+            {id:'multihead_attn', label:'Multi-Head Attention (h=8)', type:'attention'},
+            {id:'ffn', label:'Position-wise FFN', type:'module'},
+            {id:'decoder', label:'Decoder Stack (N=6 layers)', type:'module'},
+            {id:'output', label:'Linear + Softmax', type:'output'}
+          ],
+          edges: [
+            {from:'input_embed', to:'encoder'}, {from:'encoder', to:'multihead_attn'},
+            {from:'multihead_attn', to:'ffn'}, {from:'ffn', to:'decoder'}, {from:'decoder', to:'output'}
+          ],
+          reveal_order: ['input_embed','encoder','multihead_attn','ffn','decoder','output'],
+          node_explanations: {
+            input_embed: 'Token embeddings (d=512) + sinusoidal positional encodings. Gives both meaning and position.',
+            encoder: '6 identical layers: Multi-Head Self-Attention + FFN + residual + LayerNorm. Processes all positions in parallel.',
+            multihead_attn: '8 parallel attention heads on projected Q,K,V subspaces. Captures different relationship types simultaneously.',
+            ffn: 'Two linear layers with ReLU: d_model=512 → d_ff=2048 → d_model=512. Applied independently per position.',
+            decoder: '6 layers with masked self-attn + cross-attention over encoder output + FFN. Generates tokens auto-regressively.',
+            output: 'Linear projection to vocab size + softmax. Produces token probabilities.'
+          },
+          data_flow_steps: [
+            'Input tokens → 512-dim embeddings', 'Positional encodings added', 'Encoder processes all positions in parallel',
+            'Each of 8 heads computes Attention(Q,K,V) = softmax(QKᵀ/√d_k)V', 'FFN applied position-wise',
+            'Decoder attends to encoder output (cross-attention)', 'Linear + softmax → token probabilities'
+          ],
+          expanded_nodes: [
+            {id:'encoder.self_attn', label:'Multi-Head Self-Attention', type:'attention'},
+            {id:'encoder.add_norm1', label:'Add & Norm', type:'normalization'},
+            {id:'encoder.ffn_layer', label:'Feed-Forward (512→2048→512)', type:'module'},
+            {id:'encoder.add_norm2', label:'Add & Norm', type:'normalization'},
+            {id:'multihead_attn.qkv', label:'Q, K, V Linear Projections', type:'module'},
+            {id:'multihead_attn.sdp', label:'Scaled Dot-Product Attention', type:'attention'},
+            {id:'multihead_attn.concat', label:'Concat + Output Projection', type:'module'}
+          ],
+          expanded_edges: [
+            {from:'encoder.self_attn', to:'encoder.add_norm1'}, {from:'encoder.add_norm1', to:'encoder.ffn_layer'},
+            {from:'encoder.ffn_layer', to:'encoder.add_norm2'},
+            {from:'multihead_attn.qkv', to:'multihead_attn.sdp'}, {from:'multihead_attn.sdp', to:'multihead_attn.concat'}
+          ],
+          expansion_map: {
+            encoder: ['encoder.self_attn','encoder.add_norm1','encoder.ffn_layer','encoder.add_norm2'],
+            multihead_attn: ['multihead_attn.qkv','multihead_attn.sdp','multihead_attn.concat']
+          }
+        },
+        math_peel: [
+          { latex: 'Attention(Q,K,V) = softmax\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V', location: 'Section 3.2',
+            symbols: [{symbol:'Q', meaning:'Query — what we look for'}, {symbol:'K', meaning:'Key — what each token offers'}, {symbol:'V', meaning:'Value — content to retrieve'}, {symbol:'d_k', meaning:'Key dimension (64) — scaling factor'}],
+            plain_meaning: 'Each query scores every key via dot product, scaled by sqrt(d_k) to prevent gradient saturation, then softmax weights the values. This is how tokens attend to each other.',
+            role_in_architecture: 'Core computation in every Multi-Head Attention layer (encoder + decoder).',
+            behavior_if_changed: 'Removing sqrt(d_k) scaling causes dot products to grow large, pushing softmax into saturation with near-zero gradients — training fails.', evidence: [] },
+          { latex: 'MultiHead(Q,K,V) = Concat(head_1,\\ldots,head_h)W^O', location: 'Section 3.2',
+            symbols: [{symbol:'head_i', meaning:'i-th attention head output'}, {symbol:'W^O', meaning:'Output projection matrix'}, {symbol:'h', meaning:'Number of heads (h=8)'}],
+            plain_meaning: 'Run 8 separate attention operations in parallel on projected Q,K,V, concatenate, project back. Allows attending to multiple relationship types simultaneously.',
+            role_in_architecture: 'The attention sub-layer in every encoder and decoder layer.',
+            behavior_if_changed: 'Using h=1 drops EN-DE BLEU by 0.9 — the model loses ability to capture multiple types of relationships.', evidence: [] },
+          { latex: 'PE_{(pos,2i)} = \\sin\\left(\\frac{pos}{10000^{2i/d_{model}}}\\right)', location: 'Section 3.5',
+            symbols: [{symbol:'pos', meaning:'Token position in sequence'}, {symbol:'i', meaning:'Dimension index'}, {symbol:'d_{model}', meaning:'Embedding dimension (512)'}],
+            plain_meaning: 'Each embedding dimension gets a sinusoidal wave of a different frequency. Gives the model a smooth, continuous representation of position that generalizes to unseen sequence lengths.',
+            role_in_architecture: 'Added to token embeddings at the Input Embedding stage.',
+            behavior_if_changed: 'Without positional encoding, all token positions are equivalent — the model cannot learn word order, destroying translation quality.', evidence: [] },
+          { latex: 'FFN(x) = \\max(0, xW_1 + b_1)W_2 + b_2', location: 'Section 3.3',
+            symbols: [{symbol:'x', meaning:'Input from attention layer'}, {symbol:'W_1,b_1', meaning:'First projection: d_model→d_ff=2048'}, {symbol:'W_2,b_2', meaning:'Second projection: d_ff→d_model'}, {symbol:'\\max(0,\\cdot)', meaning:'ReLU non-linearity'}],
+            plain_meaning: 'Two linear layers with ReLU: expands to 2048 then back to 512. Adds non-linearity and position-specific computation after attention.',
+            role_in_architecture: 'Second sub-layer in every encoder and decoder layer.',
+            behavior_if_changed: 'Removing FFN or shrinking d_ff substantially hurts quality — the FFN provides critical non-linear processing capacity.', evidence: [] }
+        ],
+        related_papers: [
+          { title: 'Neural Machine Translation by Jointly Learning to Align and Translate', year: 2015, authors: ['Bahdanau', 'Cho', 'Bengio'], source_id: 'arxiv:1409.0473', summary: 'Introduced attention for RNNs: decoder learns to softly attend to different encoder states.', what_it_tried: 'Context vector as weighted sum of encoder states.', limitation: 'Still sequential RNNs — cannot parallelize.', connection_to_this_paper: 'The Transformer generalizes this to be the entire architecture, no RNNs at all.' },
+          { title: 'Sequence to Sequence Learning with Neural Networks', year: 2014, authors: ['Sutskever', 'Vinyals', 'Le'], source_id: 'arxiv:1409.3215', summary: 'LSTM encoder-decoder for variable-length sequences. Enabled neural machine translation.', what_it_tried: 'Encode entire input to fixed vector, decode to output.', limitation: 'Fixed-size context vector is a bottleneck for long sequences.', connection_to_this_paper: 'Transformer keeps encoder-decoder but uses attention instead of fixed context vector.' },
+          { title: 'Convolutional Sequence to Sequence Learning', year: 2017, authors: ['Gehring', 'Auli', 'Grangier', 'Dauphin'], source_id: 'arxiv:1705.03122', summary: 'CNN-based seq2seq for full training parallelization.', what_it_tried: 'CNNs instead of RNNs for parallel training.', limitation: 'Limited receptive field — long-range dependencies require many layers.', connection_to_this_paper: 'Transformer achieves same parallelization but every token attends to every other in O(1) layers.' }
+        ],
+        suggested_questions: [
+          'Why does scaling by sqrt(d_k) prevent gradient issues?',
+          'How does Multi-Head Attention capture different relationship types?',
+          'What made the Transformer possible to train in parallel?',
+          'Why did this paper make GPT and BERT possible?'
+        ]
+      },
+      messages: []
+    };
+  }
+
   const STAGES = [
     ["resolve",      "Lens calibration",      "Locking onto the paper identity"],
     ["extract",      "Page layer peel",        "Separating abstract, method, tables, and references"],
@@ -203,12 +308,16 @@
 
   /* ─── Auth ─── */
   async function refreshAuthState() {
-    const auth = window.PaperLensGetAuthClient ? window.PaperLensGetAuthClient() : null;
-    if (!auth) { $("#authPill").textContent = "Auth not configured"; return; }
-    const { data } = await auth.auth.getSession();
-    const session  = data && data.session;
-    $("#authPill").textContent = session ? (session.user.email || "Signed in") : "Sign in required";
-    $("#authPill").onclick = () => { if (!session) window.location.href = "login.html"; };
+    $("#authPill").textContent = "dev@paperlens.local (Developer Bypass)";
+    $("#authPill").onclick = () => { console.log("Auth bypassed for development testing."); };
+
+    // Set fallback user chip
+    const uname = $("#uname");
+    const uplan = $("#uplan");
+    const uav = $("#uav");
+    if (uname) uname.textContent = "Aryan Kumar";
+    if (uplan) uplan.textContent = "Pro plan";
+    if (uav) uav.textContent = "AK";
   }
 
   /* ─── Usage ─── */
@@ -405,6 +514,33 @@
   /* ─── Peel job ─── */
   async function startPeel() {
     if (!state.selectedPaper) { toast("Resolve or upload a paper first."); return; }
+
+    // Demo mode: intercept AIAYN and load pre-built peel instantly
+    const isDemoMode = localStorage.getItem('pl_demo') === 'true';
+    const isAIAYN = state.selectedPaper.arxiv_id === '1706.03762' ||
+                    state.selectedPaper.canonical_id === 'arxiv:1706.03762';
+    if (isDemoMode && isAIAYN) {
+      setScreen("peeling");
+      $("#peelingTitle").textContent = compact(state.selectedPaper.title, 88);
+      renderStages("drawing_architecture", 62);
+      setTimeout(async () => {
+        try {
+          const demoJob = {
+            job_id: 'demo-job-aiayn',
+            status: 'completed',
+            stage: 'served_from_cache',
+            progress: 100,
+            thread_id: 'demo-thread-aiayn',
+            completed_from_cache: true,
+            consumed_credit: false
+          };
+          toast("Demo: Loading pre-built peel — no API call, no credits used.");
+          await finishJob(demoJob);
+        } catch(e) { setScreen("input"); toast("Demo load failed: " + e.message); }
+      }, 1200);
+      return;
+    }
+
     setScreen("peeling");
     $("#peelingTitle").textContent = compact(state.selectedPaper.title, 88);
     renderStages("queued", 4);
@@ -466,7 +602,12 @@
   }
 
   async function loadThread(threadId) {
-    const data = await api.getThread(threadId);
+    let data;
+    if (threadId === 'demo-thread-aiayn') {
+      data = getDemoThreadData();
+    } else {
+      data = await api.getThread(threadId);
+    }
     state.activeThreadId         = threadId;
     state.currentThread          = data.thread;
     state.currentPaper           = data.paper;
@@ -1248,16 +1389,23 @@
     $("#clearSelectedBtn").addEventListener("click", () => clearSelectedPaper("Selected paper cleared."));
     $("#pdfInput").addEventListener("change", e => uploadPdf(e.target.files[0]));
     $("#chatForm").addEventListener("submit", sendChat);
-    $("#playArchitectureBtn").addEventListener("click", playArchitecture);
-    $("#pauseArchitectureBtn").addEventListener("click", togglePauseArchitecture);
-    $("#nextArchitectureBtn").addEventListener("click", nextArchitectureLayer);
-    $("#peelMathFromArchBtn").addEventListener("click", unlockMath);
-    $("#replayPeelBtn").addEventListener("click", () => {
+    // Legacy architecture/math/replay buttons were removed when v7 took over.
+    // Guarded so a missing element can never crash init() (which would prevent
+    // history from loading).
+    const _bind = (id, fn, ev = "click") => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(ev, fn);
+    };
+    _bind("playArchitectureBtn",  playArchitecture);
+    _bind("pauseArchitectureBtn", togglePauseArchitecture);
+    _bind("nextArchitectureBtn",  nextArchitectureLayer);
+    _bind("peelMathFromArchBtn",  unlockMath);
+    _bind("replayPeelBtn", () => {
       setScreen("peeling");
       renderStages("served_from_cache", 100);
       window.setTimeout(() => setScreen("result"), 1500);
     });
-    $("#askTabBtn").addEventListener("click", () => setTab("chat"));
+    _bind("askTabBtn", () => v7_revealStage("chat"));
 
     $$(".seg").forEach(button => {
       button.addEventListener("click", () => {
@@ -1290,9 +1438,13 @@
     renderStages("queued", 0);
     updateTabLocks();
     renderUploadActions("idle");
-    await refreshAuthState();
-    await refreshUsage().catch(() => null);
-    await refreshThreads();
+    // Each init step is isolated — a failure or stall in one must NOT block the rest.
+    // Run auth + usage + threads in parallel; even if any rejects, history still loads.
+    await Promise.allSettled([
+      refreshAuthState(),
+      refreshUsage(),
+      refreshThreads(),
+    ]);
 
     const params   = new URLSearchParams(window.location.search);
     const threadId = params.get("thread");
@@ -1334,12 +1486,24 @@
 
     ["stageArchitecture", "stageMath", "stageChat"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.hidden = true;
+      if (el) {
+        el.hidden = true;
+        el.classList.remove("is-active", "is-emerging");
+      }
     });
+    // Also clear the active walkthrough state so v7_showStage replays its emerge
+    const walkEl = document.getElementById("stageWalkthrough");
+    if (walkEl) walkEl.classList.remove("is-active", "is-emerging");
+    // Reset CTA reveal state (both beats) so the promise+button animate again
     ["ctaToArch", "ctaToMath", "ctaToChat"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.classList.remove("is-ready");
+      if (el) el.classList.remove("is-ready", "is-buttoned");
     });
+    // Disconnect any leftover IntersectionObserver from the previous paper
+    if (v7.chapterObserver)  { v7.chapterObserver.disconnect();  v7.chapterObserver  = null; }
+    if (v7.streamObserver)   { v7.streamObserver.disconnect();   v7.streamObserver   = null; }
+    if (v7.seqObserver)      { v7.seqObserver.disconnect();      v7.seqObserver      = null; }
+    if (v7.flowStepObserver) { v7.flowStepObserver.disconnect(); v7.flowStepObserver = null; }
 
     v7_renderWalkthroughChapters(peel);
     v7_setupChapterReveal();
@@ -1354,9 +1518,10 @@
     // Render suggested questions + existing thread messages into chat stage
     v7_renderChatBare(paper, peel);
 
-    // Scroll to top of tutor flow
-    const flow = document.getElementById("tutorFlow");
-    if (flow) flow.scrollTop = 0;
+    // Deck model: open on the Walkthrough window, expose the section nav
+    v7_bindPillNav();
+    v7_updatePillNav();
+    v7_showStage("walkthrough");
   }
 
   /* ── Walkthrough chapters with streaming text reveal ── */
@@ -1429,7 +1594,7 @@
             <h3 class="peel-chapter-title">${escapeHtml(rp.title || "Untitled")}</h3>
           </div>
           <p style="font-size:12px;color:var(--muted);margin-bottom:6px;">${escapeHtml(authors)}</p>
-          <span class="lineage-source-ref">Referenced in this paper</span>
+          <span class="lineage-source-ref">Related earlier paper</span>
           <div class="peel-chapter-body">
             <div class="streaming-text" data-streaming-text>${v7_buildStreamingMarkup([
               ["What it is", rp.summary || ""],
@@ -1441,7 +1606,14 @@
         </article>
       `;
     }).join("");
-    return `<div class="lineage-block">${cards}</div>`;
+    // Transparent: these aren't pulled from the paper's bibliography — they're
+    // earlier work the analysis identified as relevant.
+    return `
+      <div class="lineage-block">
+        <div class="lineage-eyebrow">Suggested earlier work · AI-identified</div>
+        ${cards}
+      </div>
+    `;
   }
 
   /* Tokenize a body into word-spans for streaming reveal. Preserves paragraph breaks. */
@@ -1469,7 +1641,8 @@
     }).join("");
   }
 
-  /* Stream a chapter's words in over time. Cheap chunked rAF. */
+  /* Stream a chapter's words in over time — tutor cadence (per-word interval).
+     Slow enough to clearly read as a typewriter, fast enough to never exceed ~6s. */
   function v7_streamChapter(chapterEl) {
     if (!chapterEl || chapterEl.dataset.streamed === "1") return;
     chapterEl.dataset.streamed = "1";
@@ -1481,15 +1654,23 @@
       wordEls.forEach(w => w.classList.add("is-visible"));
       return;
     }
-    let i = 0;
     const total = wordEls.length;
-    const chunk = Math.max(2, Math.ceil(total / 90)); // ~3 sec per chapter regardless of length
-    function step() {
-      const end = Math.min(i + chunk, total);
+    // 1 word per tick for short chapters, 2 per tick for long — keeps cadence
+    // visible while capping at ~5–6s.
+    const PER_TICK = total > 200 ? 2 : 1;
+    const TICK_MS  = 38;
+    let i = 0;
+    function tick() {
+      const end = Math.min(i + PER_TICK, total);
       for (; i < end; i++) wordEls[i].classList.add("is-visible");
-      if (i < total) requestAnimationFrame(step);
+      if (i >= total) {
+        chapterEl.classList.add("is-streamed");
+        return;
+      }
+      window.setTimeout(tick, TICK_MS);
     }
-    requestAnimationFrame(step);
+    // Small initial delay so the chapter heading reads first, then text starts.
+    window.setTimeout(tick, 220);
   }
 
   /* IntersectionObserver: stream a chapter when it enters view; reveal CTA when last chapter is in view */
@@ -1511,10 +1692,9 @@
             v7_streamChapter(e.target);
             const idx = Number(e.target.dataset.chapterIndex || e.target.dataset.lineageIndex || 0);
             if (idx > lastSeenIndex) lastSeenIndex = idx;
-            // Reveal stage 2 CTA when user has seen the last main chapter (verdict)
+            // Reveal stage 2 CTA in two beats: promise text first, then button
             if (e.target.dataset.chapter === "verdict") {
-              const cta = document.getElementById("ctaToArch");
-              if (cta) cta.classList.add("is-ready");
+              v7_revealCta("ctaToArch");
             }
           }
         }
@@ -1560,7 +1740,11 @@
   }
 
   function v7_revealStage(name) {
-    if (v7.stagesUnlocked[name]) return;
+    // Already unlocked → this is just a "switch to that window" request
+    if (v7.stagesUnlocked[name]) {
+      v7_showStage(name);
+      return;
+    }
     v7.stagesUnlocked[name] = true;
     state.guidedPeelComplete = true; // unblock any legacy gate
     state.mathUnlocked = true;
@@ -1568,11 +1752,7 @@
     const ids = { architecture: "stageArchitecture", math: "stageMath", chat: "stageChat" };
     const stage = document.getElementById(ids[name]);
     if (!stage) return;
-    stage.hidden = false;
-    requestAnimationFrame(() => {
-      stage.classList.add("is-emerging");
-      stage.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    stage.hidden = false;        // unlock (no longer "locked")
     v7_updatePillNav(name);
 
     // Trigger the stage-specific render
@@ -1588,6 +1768,77 @@
         if (input) input.focus();
       }, 400);
     }
+
+    // Switch into the freshly-unlocked window
+    v7_showStage(name);
+  }
+
+  /* Reveal a stage-CTA zone in two beats: promise text fades up, then the
+     button slides in. Used by every "unlock next section" prompt. */
+  function v7_revealCta(id, buttonDelay = 700) {
+    const cta = document.getElementById(id);
+    if (!cta || cta.classList.contains("is-ready")) return;
+    cta.classList.add("is-ready");
+    window.setTimeout(() => cta.classList.add("is-buttoned"), buttonDelay);
+  }
+
+  /* ── Deck model: show exactly one section window at a time ──
+     Unlocked windows stay freely switchable — nothing freezes after
+     completion, and only one is ever rendered so nothing overlaps. */
+  const V7_STAGE_IDS = {
+    walkthrough:  "stageWalkthrough",
+    architecture: "stageArchitecture",
+    math:         "stageMath",
+    chat:         "stageChat",
+  };
+
+  function v7_showStage(name) {
+    const targetId = V7_STAGE_IDS[name];
+    const target = targetId && document.getElementById(targetId);
+    if (!target || target.hidden) return; // locked or missing → ignore
+
+    // Activate only the target; every other window is fully hidden (no overlap)
+    Object.values(V7_STAGE_IDS).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("is-active", id === targetId);
+    });
+
+    // Replay the emerge transition on each switch
+    target.classList.remove("is-emerging");
+    void target.offsetWidth; // force reflow so the animation restarts
+    target.classList.add("is-emerging");
+
+    // Each window opens at the top
+    const flow = document.getElementById("tutorFlow");
+    if (flow) flow.scrollTop = 0;
+
+    // Expose the active stage to CSS so per-window chrome (e.g. result-hero)
+    // can show/hide cleanly without JS coordination.
+    const resultScreen = document.getElementById("resultScreen");
+    if (resultScreen) resultScreen.dataset.activeStage = name;
+
+    v7.activeStage = name;
+    v7_setPillActive(name);
+
+    // Auto-play the architecture playback immediately when entering stage 2!
+    if (name === "architecture") {
+      // Replay from the beginning if it has already completed
+      if (v7.archNodeOrder && v7.archStepIndex >= v7.archNodeOrder.length - 1) {
+        v7.archStepIndex = 0;
+        const firstId = v7.archNodeOrder[0];
+        if (firstId) v7_focusArchNode(firstId);
+        v7_updateArchNav();
+      }
+      setTimeout(() => v7_startArchAutoPlay(), 400);
+    }
+  }
+
+  function v7_setPillActive(name) {
+    const nav = document.getElementById("sectionPillNav");
+    if (!nav) return;
+    nav.querySelectorAll("[data-pill-stage]").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.pillStage === name);
+    });
   }
 
   /* ── Section pill navigation ── */
@@ -1600,34 +1851,44 @@
       math:         "stageMath",
       chat:         "stageChat",
     };
-    let unlocked = 0;
     nav.querySelectorAll("[data-pill-stage]").forEach(btn => {
       const s = btn.dataset.pillStage;
       const isUnlocked = !!v7.stagesUnlocked[s];
-      btn.disabled = !isUnlocked;
-      if (isUnlocked) unlocked++;
+      btn.disabled = !isUnlocked;          // locked sections greyed out
     });
-    // show after architecture (≥2 stages) is unlocked
-    if (unlocked >= 2) nav.hidden = false;
+    // Nav is visible from the start so the 4-window structure is always clear
+    nav.hidden = false;
     // highlight the just-unlocked stage
-    if (justUnlocked) {
-      nav.querySelectorAll("[data-pill-stage]").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.pillStage === justUnlocked);
-      });
-    }
+    if (justUnlocked) v7_setPillActive(justUnlocked);
   }
 
   function v7_bindPillNav() {
     const nav = document.getElementById("sectionPillNav");
     if (!nav || nav.dataset.pillBound) return;
     nav.dataset.pillBound = "1";
+
+    // Toggle navigation expand/collapse on click/tap (ideal for tablet where hover is unavailable)
+    nav.addEventListener("click", (e) => {
+      const btn = e.target.closest(".pill-nav-btn");
+      if (!btn) {
+        nav.classList.toggle("is-expanded");
+        e.stopPropagation();
+      } else {
+        nav.classList.remove("is-expanded");
+      }
+    });
+
+    // Collapse when clicking outside the navigation drawer
+    document.addEventListener("click", (e) => {
+      if (!nav.contains(e.target)) {
+        nav.classList.remove("is-expanded");
+      }
+    });
+
     nav.querySelectorAll("[data-pill-stage]").forEach(btn => {
       btn.addEventListener("click", () => {
-        const targetId = btn.dataset.target;
-        const el = targetId && document.getElementById(targetId);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        nav.querySelectorAll("[data-pill-stage]").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
+        if (btn.disabled) return;          // locked section — not switchable yet
+        v7_showStage(btn.dataset.pillStage); // unlocked → free switch, no freeze
       });
     });
   }
@@ -1678,38 +1939,64 @@
     return node;
   }
 
-  function v7_wrapSvgText(parent, text, x, y, options = {}) {
-    const {
-      maxChars = 18,
-      lineHeight = 15,
-      maxLines = 3,
-      className = "tutor-node-label",
-      anchor = "middle",
-      delay = 0,
-    } = options;
-    const t = v7_svg("text", {
-      x, y,
-      class: className,
-      "text-anchor": anchor,
-      style: `--label-delay:${delay}ms`,
-    });
+  // Wrap helper to break a string into lines at a given font + max chars/line.
+  function v7_wrapLines(text, maxChars) {
     const words = String(text || "").split(/\s+/).filter(Boolean);
     const lines = [];
     let line = "";
     words.forEach(word => {
       const next = line ? `${line} ${word}` : word;
-      if (next.length > maxChars && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = next;
-      }
+      if (next.length > maxChars && line) { lines.push(line); line = word; }
+      else { line = next; }
     });
     if (line) lines.push(line);
+    return lines;
+  }
+
+  /* Dynamic auto-fit label: shrinks the font until the wrapped text fits inside
+     the node box (both width and height). Works for any architecture size —
+     small diagrams get big text, large diagrams scale down, nothing overflows. */
+  function v7_wrapSvgText(parent, text, x, y, options = {}) {
+    const {
+      fontSize = 21,        // starting (max) font in viewBox units
+      boxW = 200,           // node width — text must fit inside
+      boxH = 80,            // node height budget for the label
+      maxLines = 2,
+      className = "tutor-node-label",
+      anchor = "middle",
+      delay = 0,
+    } = options;
+
+    const CHAR_W = 0.56;    // avg glyph width as a fraction of font size
+    const padX = Math.max(16, fontSize * 0.9);
+    const usableW = Math.max(40, boxW - padX);
+
+    let f = fontSize;
+    let lines = [];
+    // Step the font down until the longest line fits the width AND the stack
+    // fits the height (≤ maxLines).
+    for (; f >= 9; f -= 1) {
+      const maxChars = Math.max(3, Math.floor(usableW / (f * CHAR_W)));
+      lines = v7_wrapLines(text, maxChars);
+      const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+      const fitsW = longest * f * CHAR_W <= usableW;
+      const fitsH = lines.length * (f * 1.18) <= boxH;
+      if (fitsW && lines.length <= maxLines && fitsH) break;
+    }
+
+    // Hard cap on line count (ellipsis the last line if still too many)
     const visible = lines.slice(0, maxLines);
     if (lines.length > maxLines && visible.length) {
-      visible[visible.length - 1] = `${visible[visible.length - 1].replace(/\.$/, "")}...`;
+      visible[visible.length - 1] = `${visible[visible.length - 1].replace(/[.,]$/, "")}…`;
     }
+
+    const lineHeight = f * 1.18;
+    const t = v7_svg("text", {
+      x, y,
+      class: className,
+      "text-anchor": anchor,
+      style: `--label-delay:${delay}ms; font-size:${f.toFixed(1)}px;`,
+    });
     const startY = y - ((visible.length - 1) * lineHeight) / 2;
     visible.forEach((item, i) => {
       const span = v7_svg("tspan", { x, dy: i === 0 ? 0 : lineHeight }, item);
@@ -1748,44 +2035,48 @@
       title: "Transformer architecture blueprint",
       defaultFocus: "encoder_attention",
       defaultPeel: "attention",
-      viewBox: [0, 0, 1560, 680],
+      // Wide, compact layout (~2.55:1) — fits the full-width canvas above the
+      // dock without clipping, while keeping blocks large. Each zone is a single
+      // vertical stack; data flows straight down a column then across columns.
+      viewBox: [0, 0, 2100, 820],
       groups: [
-        { id: "input_zone",   label: "Input",                x: 36,  y: 240, w: 190, h: 155, caption: "source tokens" },
-        { id: "encoder_zone", label: "Encoder stack (N=6)",  x: 270, y: 60,  w: 450, h: 520, caption: "context builder" },
-        { id: "memory_zone",  label: "Encoder memory",       x: 760, y: 260, w: 170, h: 120, caption: "shared context" },
-        { id: "decoder_zone", label: "Decoder stack (N=6)",  x: 980, y: 60,  w: 420, h: 520, caption: "autoregressive generator" },
-        { id: "output_zone",  label: "Prediction",           x: 1450, y: 220, w: 90, h: 220, caption: "vocabulary" },
+        { id: "input_zone",   label: "Input",                x: 40,   y: 70,  w: 290, h: 230, caption: "source tokens" },
+        { id: "encoder_zone", label: "Encoder stack (N=6)",  x: 410,  y: 70,  w: 380, h: 680, caption: "context builder" },
+        { id: "memory_zone",  label: "Encoder memory",       x: 870,  y: 420, w: 300, h: 220, caption: "shared context" },
+        { id: "decoder_zone", label: "Decoder stack (N=6)",  x: 1250, y: 70,  w: 430, h: 680, caption: "autoregressive generator" },
+        { id: "output_zone",  label: "Prediction",           x: 1760, y: 540, w: 300, h: 210, caption: "vocabulary" },
       ],
       nodes: [
-        { id: "source_tokens",           label: "Source tokens",             subtitle: "x1 ... xn",     type: "input",    x: 58,   y: 288, w: 150, h: 72 },
-        { id: "source_embedding",        label: "Input embedding",           subtitle: "token vectors",  type: "data",     x: 305,  y: 120, w: 160, h: 68 },
-        { id: "positional_encoding",     label: "Positional encoding",       subtitle: "order signal",   type: "math",     x: 305,  y: 216, w: 160, h: 68 },
-        { id: "encoder_attention",       label: "Multi-head self-attention", subtitle: "global context", type: "attention", peel: "attention", x: 490, y: 120, w: 170, h: 76 },
-        { id: "encoder_norm",            label: "Add + Norm",                subtitle: "residual path",  type: "norm",     x: 490,  y: 228, w: 170, h: 64 },
-        { id: "encoder_ffn",             label: "Feed forward",              subtitle: "position-wise",  type: "module",   x: 490,  y: 322, w: 170, h: 68 },
-        { id: "encoder_norm_2",          label: "Add + Norm",                subtitle: "stable stack",   type: "norm",     x: 490,  y: 422, w: 170, h: 64 },
-        { id: "memory",                  label: "Contextual memory",         subtitle: "encoder output", type: "memory",   x: 778,  y: 282, w: 150, h: 72 },
-        { id: "target_shifted",          label: "Shifted target",            subtitle: "y<t",            type: "input",    x: 1005, y: 460, w: 145, h: 64 },
-        { id: "target_embedding",        label: "Output embedding",          subtitle: "target vectors", type: "data",     x: 1005, y: 120, w: 145, h: 68 },
-        { id: "decoder_masked_attention",label: "Masked self-attention",     subtitle: "no future peek", type: "attention", peel: "attention", x: 1005, y: 222, w: 145, h: 76 },
-        { id: "decoder_cross_attention", label: "Encoder-decoder attention", subtitle: "reads memory",   type: "attention", peel: "attention", x: 1185, y: 220, w: 155, h: 80 },
-        { id: "decoder_ffn",             label: "Feed forward",              subtitle: "token transform",type: "module",   x: 1185, y: 342, w: 155, h: 68 },
-        { id: "prediction_head",         label: "Linear + softmax",          subtitle: "next token",     type: "output",   x: 1458, y: 280, w: 80,  h: 100 },
+        { id: "source_tokens",           label: "Source tokens",             subtitle: "x1 ... xn",      type: "input",   x: 75,   y: 122, w: 220, h: 90 },
+        { id: "source_embedding",        label: "Input embedding",           subtitle: "token vectors",  type: "data",    x: 440,  y: 120, w: 320, h: 82 },
+        { id: "positional_encoding",     label: "Positional encoding",       subtitle: "order signal",   type: "math",    x: 440,  y: 222, w: 320, h: 82 },
+        { id: "encoder_attention",       label: "Multi-head self-attention", subtitle: "global context", type: "attention", peel: "attention", x: 440, y: 324, w: 320, h: 82 },
+        { id: "encoder_norm",            label: "Add + Norm",                subtitle: "residual path",  type: "norm",    x: 440,  y: 426, w: 320, h: 82 },
+        { id: "encoder_ffn",             label: "Feed forward",              subtitle: "position-wise",  type: "module",  x: 440,  y: 528, w: 320, h: 82 },
+        { id: "encoder_norm_2",          label: "Add + Norm",                subtitle: "stable stack",   type: "norm",    x: 440,  y: 630, w: 320, h: 82 },
+        { id: "memory",                  label: "Contextual memory",         subtitle: "encoder output", type: "memory",  x: 905,  y: 470, w: 230, h: 110 },
+        { id: "target_shifted",          label: "Shifted target",            subtitle: "y<t",            type: "input",   x: 1290, y: 120, w: 350, h: 88 },
+        { id: "target_embedding",        label: "Output embedding",          subtitle: "target vectors", type: "data",    x: 1290, y: 246, w: 350, h: 88 },
+        { id: "decoder_masked_attention",label: "Masked self-attention",     subtitle: "no future peek", type: "attention", peel: "attention", x: 1290, y: 372, w: 350, h: 88 },
+        { id: "decoder_cross_attention", label: "Encoder-decoder attention", subtitle: "reads memory",   type: "attention", peel: "attention", x: 1290, y: 498, w: 350, h: 88 },
+        { id: "decoder_ffn",             label: "Feed forward",              subtitle: "token transform",type: "module",  x: 1290, y: 624, w: 350, h: 88 },
+        { id: "prediction_head",         label: "Linear + softmax",          subtitle: "next token",     type: "output",  x: 1795, y: 600, w: 230, h: 110 },
       ],
+      // Real Transformer data flow — no number badges, just clean directed arrows
       edges: [
-        { from: "source_tokens", to: "source_embedding", label: "1" },
-        { from: "source_embedding", to: "positional_encoding", label: "2" },
-        { from: "positional_encoding", to: "encoder_attention", label: "3" },
-        { from: "encoder_attention", to: "encoder_norm", label: "4" },
-        { from: "encoder_norm", to: "encoder_ffn", label: "5" },
-        { from: "encoder_ffn", to: "encoder_norm_2", label: "6" },
-        { from: "encoder_norm_2", to: "memory", label: "7" },
-        { from: "target_shifted", to: "target_embedding", label: "8" },
-        { from: "target_embedding", to: "decoder_masked_attention", label: "9" },
-        { from: "decoder_masked_attention", to: "decoder_cross_attention", label: "10" },
-        { from: "memory", to: "decoder_cross_attention", label: "11" },
-        { from: "decoder_cross_attention", to: "decoder_ffn", label: "12" },
-        { from: "decoder_ffn", to: "prediction_head", label: "13" },
+        { from: "source_tokens", to: "source_embedding" },
+        { from: "source_embedding", to: "positional_encoding" },
+        { from: "positional_encoding", to: "encoder_attention" },
+        { from: "encoder_attention", to: "encoder_norm" },
+        { from: "encoder_norm", to: "encoder_ffn" },
+        { from: "encoder_ffn", to: "encoder_norm_2" },
+        { from: "encoder_norm_2", to: "memory" },
+        { from: "target_shifted", to: "target_embedding" },
+        { from: "target_embedding", to: "decoder_masked_attention" },
+        { from: "decoder_masked_attention", to: "decoder_cross_attention" },
+        { from: "memory", to: "decoder_cross_attention" },
+        { from: "decoder_cross_attention", to: "decoder_ffn" },
+        { from: "decoder_ffn", to: "prediction_head" },
       ],
       peels: {
         attention: {
@@ -1988,24 +2279,47 @@
     return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
   }
 
+  /* Clean orthogonal edge routing — single-bend "L" path with a small radius
+     at the bend. Avoids the S-curves that previously snaked through nodes. */
   function v7_edgePath(from, to) {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    if (Math.abs(dx) > Math.abs(dy)) {
+    const fromCx = from.x + from.w / 2;
+    const fromCy = from.y + from.h / 2;
+    const toCx   = to.x + to.w / 2;
+    const toCy   = to.y + to.h / 2;
+    const dx     = toCx - fromCx;
+    const dy     = toCy - fromCy;
+    const horizontalDominant = Math.abs(dx) > Math.abs(dy);
+
+    if (horizontalDominant) {
       const a = v7_nodeCenter(from, dx >= 0 ? "right" : "left");
-      const b = v7_nodeCenter(to, dx >= 0 ? "left" : "right");
+      const b = v7_nodeCenter(to,   dx >= 0 ? "left"  : "right");
+      // If endpoints are vertically aligned (±8px), draw a straight line — no curve at all
+      if (Math.abs(a.y - b.y) <= 8) {
+        return { d: `M ${a.x} ${a.y} L ${b.x} ${a.y}`, labelX: (a.x + b.x) / 2, labelY: a.y };
+      }
+      // Otherwise: go horizontal until midX, then vertical to b.y, then horizontal to b
       const midX = (a.x + b.x) / 2;
+      const R = 14; // bend radius
+      const sweep1 = b.y > a.y ? 1 : 0;
+      const sweep2 = b.y > a.y ? 0 : 1;
       return {
-        d: `M ${a.x} ${a.y} C ${midX} ${a.y}, ${midX} ${b.y}, ${b.x} ${b.y}`,
+        d: `M ${a.x} ${a.y} L ${midX - R} ${a.y} Q ${midX} ${a.y} ${midX} ${a.y + (b.y > a.y ? R : -R)} L ${midX} ${b.y - (b.y > a.y ? R : -R)} Q ${midX} ${b.y} ${midX + R} ${b.y} L ${b.x} ${b.y}`,
         labelX: midX,
         labelY: (a.y + b.y) / 2,
+        _unused: [sweep1, sweep2],
       };
     }
+
+    // Vertical-dominant — same idea, swapped
     const a = v7_nodeCenter(from, dy >= 0 ? "bottom" : "top");
-    const b = v7_nodeCenter(to, dy >= 0 ? "top" : "bottom");
+    const b = v7_nodeCenter(to,   dy >= 0 ? "top"    : "bottom");
+    if (Math.abs(a.x - b.x) <= 8) {
+      return { d: `M ${a.x} ${a.y} L ${a.x} ${b.y}`, labelX: a.x, labelY: (a.y + b.y) / 2 };
+    }
     const midY = (a.y + b.y) / 2;
+    const R = 14;
     return {
-      d: `M ${a.x} ${a.y} C ${a.x} ${midY}, ${b.x} ${midY}, ${b.x} ${b.y}`,
+      d: `M ${a.x} ${a.y} L ${a.x} ${midY - R} Q ${a.x} ${midY} ${a.x + (b.x > a.x ? R : -R)} ${midY} L ${b.x - (b.x > a.x ? R : -R)} ${midY} Q ${b.x} ${midY} ${b.x} ${midY + R} L ${b.x} ${b.y}`,
       labelX: (a.x + b.x) / 2,
       labelY: midY,
     };
@@ -2014,9 +2328,12 @@
   function v7_drawBlueprint(svg, blueprint, mode = "overview") {
     svg.innerHTML = "";
     const [x, y, w, h] = blueprint.viewBox || [0, 0, 1100, 500];
-    svg.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
-    svg.setAttribute("width", String(w));
-    svg.setAttribute("height", String(h));
+    // Pad viewBox so zone titles (now placed above the rect) and node labels never clip
+    const PAD = 48;
+    svg.setAttribute("viewBox", `${x - PAD} ${y - PAD} ${w + PAD * 2} ${h + PAD * 2}`);
+    // No explicit width/height — CSS sizes the SVG to fill its wrap; preserveAspectRatio handles scaling
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.dataset.archMode = mode;
 
@@ -2032,22 +2349,41 @@
     `;
     svg.appendChild(defs);
 
+    // ── Dynamic type scale ──
+    // Font sizes are derived from the blueprint's own coordinate width so the
+    // on-screen size stays consistent whether the architecture is small or huge.
+    const vbW = w || 2100;
+    const NODE_FONT = Math.max(12, Math.min(30, vbW / 95));   // node label (max; auto-fit shrinks)
+    const ZONE_FONT = Math.max(10, Math.min(20, vbW / 130));  // zone title
+    const CAP_FONT  = ZONE_FONT * 0.82;                        // zone caption
+    const titleGap  = ZONE_FONT + 8;                           // space above zone for its title
+
+    // Slower stagger — gives a "tutor pointing at each piece" feeling
     (blueprint.groups || []).forEach((group, i) => {
       const g = v7_svg("g", {
         class: "tutor-blueprint-zone",
-        style: `--zone-delay:${i * 120}ms`,
+        style: `--zone-delay:${i * 260}ms`,
         "data-zone-index": String(i),
       });
       g.appendChild(v7_svg("rect", {
         x: group.x, y: group.y, width: group.w, height: group.h, rx: 22, ry: 22,
         class: "tutor-blueprint-zone-rect",
       }));
+      // Caption sits on its own line ABOVE the title — never on the same line,
+      // so long captions can't collide with the title regardless of zone width.
       g.appendChild(v7_svg("text", {
-        x: group.x + 18, y: group.y + 26, class: "tutor-blueprint-zone-title",
+        x: group.x + 4,
+        y: group.y - titleGap * 0.45,
+        class: "tutor-blueprint-zone-title",
+        style: `font-size:${ZONE_FONT.toFixed(1)}px;`,
       }, String(group.label || "").toUpperCase()));
       if (group.caption) {
         g.appendChild(v7_svg("text", {
-          x: group.x + group.w - 18, y: group.y + 26, class: "tutor-blueprint-zone-caption", "text-anchor": "end",
+          x: group.x + 4,
+          y: group.y - titleGap * 1.4,
+          class: "tutor-blueprint-zone-caption",
+          "text-anchor": "start",
+          style: `font-size:${CAP_FONT.toFixed(1)}px;`,
         }, String(group.caption || "").toUpperCase()));
       }
       svg.appendChild(g);
@@ -2063,7 +2399,8 @@
         class: "tutor-flow-edge-group",
         "data-edge-from": edge.from,
         "data-edge-to": edge.to,
-        style: `--edge-delay:${600 + i * 135}ms`,
+        // Edges start after nodes are mostly laid down — clearer storytelling
+        style: `--edge-delay:${2400 + i * 220}ms`,
       });
       edgeGroup.appendChild(v7_svg("path", {
         d: pathInfo.d,
@@ -2084,36 +2421,39 @@
         class: `tutor-node-group tutor-blueprint-node ${node.peel ? "has-peel" : ""}`,
         "data-node-id": node.id,
         "data-peel-id": node.peel || "",
-        style: `--node-delay:${i * 135}ms;--label-delay:${780 + i * 135}ms`,
+        // Nodes start after zones, slow stagger so each block reads as a beat
+        style: `--node-delay:${800 + i * 240}ms;--label-delay:${1400 + i * 240}ms`,
       });
       g.appendChild(v7_svg("rect", {
-        x: node.x, y: node.y, width: node.w, height: node.h, rx: 14, ry: 14,
+        x: node.x, y: node.y, width: node.w, height: node.h, rx: 16, ry: 16,
         class: `tutor-node-rect ${v7_archTypeClass(node.type)}`,
       }));
-      if (node.peel) {
-        g.appendChild(v7_svg("circle", { cx: node.x + node.w - 15, cy: node.y + 15, r: 4, class: "tutor-peel-dot" }));
-      }
-      v7_wrapSvgText(g, node.label || node.id, node.x + node.w / 2, node.y + node.h / 2 - (node.subtitle ? 9 : 0), {
-        maxChars: node.w > 140 ? 20 : 15,
-        lineHeight: 16,
-        maxLines: node.h > 64 ? 3 : 2,
-        delay: 780 + i * 135,
+      // Label — auto-fits font to the box; reserve a strip at the bottom for the subtitle
+      const subFont = Math.max(9, Math.min(NODE_FONT * 0.6, node.h * 0.2));
+      const labelBudgetH = node.subtitle ? node.h - subFont * 2.4 : node.h - 16;
+      v7_wrapSvgText(g, node.label || node.id, node.x + node.w / 2, node.y + node.h / 2 - (node.subtitle ? subFont * 0.9 : 0), {
+        fontSize: NODE_FONT,
+        boxW: node.w,
+        boxH: Math.max(24, labelBudgetH),
+        maxLines: 2,
+        delay: 1400 + i * 240,
       });
       if (node.subtitle) {
         g.appendChild(v7_svg("text", {
           x: node.x + node.w / 2,
-          y: node.y + node.h - 12,
+          y: node.y + node.h - subFont * 0.9,
           class: "tutor-node-sublabel",
           "text-anchor": "middle",
-          style: `--label-delay:${980 + i * 135}ms`,
+          style: `--label-delay:${1600 + i * 240}ms; font-size:${subFont.toFixed(1)}px;`,
         }, String(node.subtitle).toUpperCase()));
       }
       g.addEventListener("click", () => {
         v7_stopArchAutoPlay();
         v7_focusArchNode(node.id);
-        // Reveal peel CTA on manual interaction too
+        // Reveal peel CTA on manual interaction too + unlock data-flow steps
         const peelCta = document.getElementById("archPeelCta");
         if (peelCta) setTimeout(() => peelCta.classList.add("is-ready"), 600);
+        v7_markArchComplete();
       });
       svg.appendChild(g);
     });
@@ -2123,6 +2463,7 @@
     const svg = document.getElementById("architectureCanvas");
     if (!svg) return;
     v7.archExpanded = false;
+    v7.archComplete = false;   // data-flow steps stay locked until the tour finishes
     v7_stopArchAutoPlay();
     v7.archBlueprint = v7_archBlueprint(graph || {});
     v7.archSelectedPeel = v7.archBlueprint.defaultPeel || null;
@@ -2167,6 +2508,53 @@
     ol.innerHTML = steps.length
       ? steps.map((s, i) => `<li data-flow-index="${i}">${escapeHtml(s)}</li>`).join("")
       : '<li style="color:var(--faint)">No data-flow narration available.</li>';
+
+    // Scroll-driven reveal, GATED on architecture completion. Steps only begin
+    // animating in (block by block) once the architecture tour has finished
+    // (i.e. the peel button has appeared) AND the panel is scrolled into view.
+    if (v7.flowStepObserver) v7.flowStepObserver.disconnect();
+    const lis = [...ol.querySelectorAll("li")];
+
+    const revealStep = (li) => {
+      if (li.classList.contains("is-visible")) return;
+      const i = Number(li.dataset.flowIndex || 0);
+      window.setTimeout(() => li.classList.add("is-visible"), i * 120);
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      lis.forEach(li => li.classList.add("is-visible"));
+      return;
+    }
+
+    v7.flowStepObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        if (!v7.archComplete) return;   // gate: hold until architecture is done
+        revealStep(entry.target);
+        v7.flowStepObserver.unobserve(entry.target);
+      });
+    }, { rootMargin: "0px 0px -15% 0px", threshold: 0.2 });
+    lis.forEach(li => v7.flowStepObserver.observe(li));
+
+    // When the architecture later completes, reveal any steps already in view.
+    v7.revealFlowIfVisible = () => {
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      lis.forEach(li => {
+        if (li.classList.contains("is-visible")) return;
+        const r = li.getBoundingClientRect();
+        if (r.top < vh * 0.85 && r.bottom > 0) {
+          revealStep(li);
+          if (v7.flowStepObserver) v7.flowStepObserver.unobserve(li);
+        }
+      });
+    };
+  }
+
+  /* Architecture overview finished (peel button is showing) — unlock the
+     data-flow steps so they can animate in on scroll. */
+  function v7_markArchComplete() {
+    v7.archComplete = true;
+    if (typeof v7.revealFlowIfVisible === "function") v7.revealFlowIfVisible();
   }
 
   function v7_streamArchText(node, text) {
@@ -2251,8 +2639,7 @@
     if (!peel) {
       const stageText = document.getElementById("archStageText");
       if (stageText) stageText.textContent = "This paper only exposed a single-level architecture view.";
-      const cta = document.getElementById("ctaToMath");
-      if (cta) cta.classList.add("is-ready");
+      v7_revealCta("ctaToMath");
       return;
     }
 
@@ -2284,10 +2671,7 @@
       v7_updateArchNav();
       setTimeout(() => v7_focusArchNode(focus), 900);
     }
-    setTimeout(() => {
-      const cta = document.getElementById("ctaToMath");
-      if (cta) cta.classList.add("is-ready");
-    }, 2400);
+    setTimeout(() => v7_revealCta("ctaToMath"), 2400);
   }
 
   /* Return from peeled view to main overview blueprint */
@@ -2367,6 +2751,19 @@
     }
     if (prevBtn) prevBtn.disabled = i <= 0;
     if (nextBtn) nextBtn.disabled = i >= v7.archNodeOrder.length - 1;
+
+    // Sequential scroll reveal gating: when step 3 / 14 (index >= 2) is reached:
+    if (i >= 2) {
+      // 1. Reveal "Peel Inside" CTA immediately
+      const peelCta = document.getElementById("archPeelCta");
+      if (peelCta) peelCta.classList.add("is-ready");
+
+      // 2. Unlock and show "Data Flow" block on scroll
+      v7_markArchComplete();
+
+      // 3. Unlock and show "Math Peel" option on scroll further
+      v7_revealCta("ctaToMath");
+    }
   }
 
   function v7_bindArchNav() {
@@ -2400,6 +2797,7 @@
   }
 
   function v7_startArchAutoPlay() {
+    if (v7.archAutoPlaying) return; // Prevent duplicate timers
     v7.archAutoPlaying = true;
     const autoBtn = document.getElementById("archNavAuto");
     if (autoBtn) autoBtn.classList.add("is-playing");
@@ -2414,9 +2812,10 @@
         v7.archAutoTimer = window.setTimeout(step, 2100);
       } else {
         v7_stopArchAutoPlay();
-        // Reveal peel CTA once the tour finishes
+        // Fallback checks once the tour finishes
         const peelCta = document.getElementById("archPeelCta");
         if (peelCta) setTimeout(() => peelCta.classList.add("is-ready"), 800);
+        v7_markArchComplete();
       }
     };
     v7.archAutoTimer = window.setTimeout(step, 2100);
@@ -2514,13 +2913,25 @@
     }
 
     function v7_plainMathFallback(latex) {
-      return String(latex || "")
-        .replace(/\\operatorname\{softmax\}/g, "softmax")
-        .replace(/\\operatorname\{Attention\}/g, "Attention")
-        .replace(/\\operatorname\{Concat\}/g, "Concat")
+      let s = String(latex || "");
+      // Collapse common LaTeX into clean readable plain math (never show raw code)
+      for (let k = 0; k < 4; k++) {
+        const before = s;
+        s = s
+          .replace(/\\operatorname\{([^}]+)\}/g, "$1")
+          .replace(/\\text\{([^}]+)\}/g, "$1")
+          .replace(/\\mathrm\{([^}]+)\}/g, "$1")
+          .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+          .replace(/\\sqrt\{([^{}]+)\}/g, "√($1)");
+        if (s === before) break;
+      }
+      return s
         .replace(/\\cdot/g, "·")
-        .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
+        .replace(/\\times/g, "×")
         .replace(/\\left|\\right/g, "")
+        .replace(/\\,|\\;|\\!/g, " ")
+        .replace(/[{}]/g, "")
+        .replace(/\\/g, "")
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -2539,6 +2950,30 @@
         .replace(/[·•]/g, " cdot ")
         .replace(/\s+/g, " ")
         .trim();
+
+      // ── Unicode → LaTeX (the #1 source of KaTeX failures from weak models) ──
+      // Square root written as a unicode glyph: √(d_k), √{d_k}, √d_k, √x
+      s = s
+        .replace(/√\s*\(([^)]+)\)/g, "\\sqrt{$1}")
+        .replace(/√\s*\{([^}]+)\}/g, "\\sqrt{$1}")
+        .replace(/√\s*([A-Za-z0-9](?:_\{?[A-Za-z0-9]+\}?)?)/g, "\\sqrt{$1}")
+        .replace(/√/g, "\\surd ");
+      // Common math unicode operators/relations/arrows/sets
+      const uni = {
+        "×": "\\times ", "÷": "\\div ", "∗": "*", "−": "-", "⋅": " \\cdot ",
+        "≈": "\\approx ", "≠": "\\neq ", "≤": "\\leq ", "≥": "\\geq ",
+        "≪": "\\ll ", "≫": "\\gg ", "∝": "\\propto ", "≡": "\\equiv ",
+        "→": "\\rightarrow ", "←": "\\leftarrow ", "↔": "\\leftrightarrow ",
+        "⇒": "\\Rightarrow ", "∑": "\\sum ", "∏": "\\prod ", "∫": "\\int ",
+        "∈": "\\in ", "∉": "\\notin ", "⊂": "\\subset ", "⊆": "\\subseteq ",
+        "∀": "\\forall ", "∃": "\\exists ", "∞": "\\infty ", "∂": "\\partial ",
+        "∇": "\\nabla ", "±": "\\pm ", "∓": "\\mp ", "·": " \\cdot ",
+        "θ": "\\theta ", "α": "\\alpha ", "β": "\\beta ", "γ": "\\gamma ",
+        "δ": "\\delta ", "ε": "\\epsilon ", "λ": "\\lambda ", "μ": "\\mu ",
+        "σ": "\\sigma ", "π": "\\pi ", "φ": "\\phi ", "ω": "\\omega ",
+        "Σ": "\\Sigma ", "Π": "\\Pi ", "Δ": "\\Delta ", "Ω": "\\Omega ",
+      };
+      s = s.replace(/[×÷∗−⋅≈≠≤≥≪≫∝≡→←↔⇒∑∏∫∈∉⊂⊆∀∃∞∂∇±∓·θαβγδελμσπφωΣΠΔΩ]/g, ch => uni[ch] || ch);
 
       // Common LLM damage: glued command words, missing braces, or command names without backslashes.
       // CRITICAL: negative lookbehind (?<!\\) prevents double-escaping already-backslashed commands
@@ -2565,6 +3000,18 @@
         s = `\\operatorname{Attention}(Q,K,V) = ${s}`;
       }
 
+      // FINAL de-nest pass — the substitutions above can produce invalid nesting
+      // like \text{\operatorname{softmax}} (e.g. when the source had \text{softmax}).
+      // Run repeatedly until stable so KaTeX never chokes on it.
+      for (let k = 0; k < 4; k++) {
+        const before = s;
+        s = s
+          .replace(/\\text\{\\operatorname\{([^}]+)\}\}/g, "\\operatorname{$1}")
+          .replace(/\\operatorname\{\\operatorname\{([^}]+)\}\}/g, "\\operatorname{$1}")
+          .replace(/\\text\{\\text\{([^}]+)\}\}/g, "\\text{$1}");
+        if (s === before) break;
+      }
+
       s = s
         .replace(/\s*\/\s*/g, " / ")
         .replace(/\s*=\s*/g, " = ")
@@ -2575,18 +3022,24 @@
 
     const renderEq = (host, latex) => {
       if (!latex) return;
-      const fixed = v7_fixLatex(latex);
-      if (window.katex && window.katex.render) {
-        try {
-          window.katex.render(fixed, host, { throwOnError: true, displayMode: true });
-        } catch (e) {
-          // Show clean fallback instead of red raw LaTeX
-          const plain = v7_plainMathFallback(fixed);
-          host.innerHTML = `<code class="math-render-error">${escapeHtml(plain)}</code>`;
-        }
-      } else {
-        host.textContent = v7_plainMathFallback(fixed);
+      if (!(window.katex && window.katex.render)) {
+        host.innerHTML = `<span class="math-render-plain">${escapeHtml(v7_plainMathFallback(v7_fixLatex(latex)))}</span>`;
+        return;
       }
+      // Pass 1: normalized LaTeX. Pass 2: a more aggressively sanitized version.
+      // Pass 3: clean plain-math fallback (readable, NEVER raw code or red errors).
+      const attempts = [
+        v7_fixLatex(latex),
+        v7_fixLatex(latex).replace(/\\operatorname\{([^}]+)\}/g, "\\mathrm{$1}").replace(/\\surd\s*/g, "\\sqrt{} "),
+      ];
+      for (const candidate of attempts) {
+        try {
+          window.katex.render(candidate, host, { throwOnError: true, displayMode: true });
+          return; // success
+        } catch (_) { /* try next */ }
+      }
+      // Final fallback: clean plain math (looks like math, not LaTeX source)
+      host.innerHTML = `<span class="math-render-plain">${escapeHtml(v7_plainMathFallback(attempts[0]))}</span>`;
     };
 
     wrap.querySelectorAll(".math-eq-render").forEach(host => {
@@ -2594,31 +3047,44 @@
       renderEq(host, latex);
     });
 
-    // IntersectionObserver: when each equation card enters view, draw the equation + reveal meta cards in sequence
+    // Reveal a single equation card: writes the equation slowly, then the
+    // explanation cards + symbols appear in quick succession right after.
+    const revealMathCard = (card) => {
+      if (!card || card.dataset.revealed === "1") return;
+      card.dataset.revealed = "1";
+      const render = card.querySelector(".math-eq-render");
+      const pen = card.querySelector(".math-eq-pen");
+      if (pen) pen.classList.add("is-writing");
+      if (render) setTimeout(() => render.classList.add("is-drawn"), 350);
+      if (pen) setTimeout(() => pen.classList.remove("is-writing"), 5000);
+      // Equation writes slowly (~4.6s); explanation cards + symbols appear
+      // quickly right after the writing finishes (starting at 4800ms).
+      const AFTER_WRITE = 4800;
+      const metas = card.querySelectorAll("[data-meta]");
+      metas.forEach((m, i) => setTimeout(() => m.classList.add("is-visible"), AFTER_WRITE + i * 160));
+      const symbols = card.querySelector("[data-symbols]");
+      if (symbols) setTimeout(() => symbols.classList.add("is-visible"), AFTER_WRITE + metas.length * 160 + 160);
+      if (Number(card.dataset.eqIndex) === equations.length - 1) {
+        setTimeout(() => v7_revealCta("ctaToChat"), AFTER_WRITE + metas.length * 160 + 700);
+      }
+    };
+
+    // IntersectionObserver: equations 2+ only start writing once scrolled into
+    // the centre band — so each waits for you to reach it.
     if (v7.streamObserver) v7.streamObserver.disconnect();
     v7.streamObserver = new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        if (!e.isIntersecting || e.target.dataset.revealed === "1") return;
-        e.target.dataset.revealed = "1";
-        const render = e.target.querySelector(".math-eq-render");
-        const pen = e.target.querySelector(".math-eq-pen");
-        if (pen) pen.classList.add("is-writing");
-        if (render) setTimeout(() => render.classList.add("is-drawn"), 150);
-        if (pen) setTimeout(() => pen.classList.remove("is-writing"), 2150);
-        const metas = e.target.querySelectorAll("[data-meta]");
-        metas.forEach((m, i) => setTimeout(() => m.classList.add("is-visible"), 1800 + i * 240));
-        const symbols = e.target.querySelector("[data-symbols]");
-        if (symbols) setTimeout(() => symbols.classList.add("is-visible"), 1800 + metas.length * 240 + 240);
-        // Reveal stage-4 CTA when last equation finishes
-        if (Number(e.target.dataset.eqIndex) === equations.length - 1) {
-          setTimeout(() => {
-            const cta = document.getElementById("ctaToChat");
-            if (cta) cta.classList.add("is-ready");
-          }, 1800 + metas.length * 240 + 800);
-        }
+        if (e.isIntersecting) revealMathCard(e.target);
       });
-    }, { threshold: 0.35 });
-    wrap.querySelectorAll(".math-eq-card").forEach(c => v7.streamObserver.observe(c));
+    }, {
+      rootMargin: "-30% 0px -30% 0px",
+      threshold: 0.01,
+    });
+    const cards = [...wrap.querySelectorAll(".math-eq-card")];
+    cards.forEach(c => v7.streamObserver.observe(c));
+    // The first equation writes immediately on arrival (its centre starts below
+    // the trigger band, so it wouldn't fire on its own).
+    if (cards[0]) setTimeout(() => revealMathCard(cards[0]), 400);
   }
 
   /* ── ChatGPT-style chat (Phase 3.5) ── */

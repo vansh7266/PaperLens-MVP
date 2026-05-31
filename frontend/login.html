@@ -1,211 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sign in — PaperLens</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0a0a;--s2:#161616;--border:rgba(255,255,255,0.07);--bh:rgba(255,255,255,0.18);--text:#fff;--muted:rgba(255,255,255,0.5);--faint:rgba(255,255,255,0.25);--g1:#a8c4f0;--g2:#f5e6cc;--font:'Inter',-apple-system,sans-serif}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
-a{text-decoration:none;color:inherit}
-button{font-family:var(--font);cursor:pointer}
-.glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:600px;background:radial-gradient(ellipse,rgba(168,196,240,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;animation:gp 5s ease-in-out infinite}
-@keyframes gp{0%,100%{opacity:0.7;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--border);position:relative;z-index:10}
-.nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
-.logo-b{font-size:16px;font-weight:700;letter-spacing:-0.4px;background:linear-gradient(135deg,var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-l{font-size:16px;font-weight:300;letter-spacing:3.5px;color:var(--muted)}
-.nav-right{font-size:13px;color:var(--muted)}
-.nav-right a{font-weight:500;background:linear-gradient(135deg,var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.main{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px;position:relative;z-index:1}
-.card{width:100%;max-width:420px;animation:fu 0.5s ease both}
-@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-.card-header{text-align:center;margin-bottom:32px}
-.card-header h1{font-size:24px;font-weight:700;letter-spacing:-0.6px;margin-bottom:8px}
-.card-header p{font-size:13.5px;color:var(--muted)}
-.alert{display:none;padding:11px 14px;border-radius:9px;font-size:13px;margin-bottom:16px;animation:fi 0.2s ease}
-@keyframes fi{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.alert-err{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171}
-.alert-ok{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);color:#4ade80}
-.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all 0.2s;margin-bottom:20px}
-.btn-google:hover{border-color:var(--bh);background:rgba(255,255,255,0.05);transform:translateY(-1px)}
-.btn-google svg{width:18px;height:18px;flex-shrink:0}
-.divider{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-.div-line{flex:1;height:1px;background:var(--border)}
-.div-txt{font-size:11.5px;color:var(--faint);white-space:nowrap}
-.form{display:flex;flex-direction:column;gap:14px}
-.fg{display:flex;flex-direction:column;gap:6px}
-.flabel{font-size:12.5px;font-weight:500;color:var(--muted)}
-.finput{font-family:var(--font);font-size:14px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);outline:none;width:100%;transition:border-color 0.15s}
-.finput::placeholder{color:var(--faint)}.finput:focus{border-color:rgba(168,196,240,0.35)}
-.finput.err{border-color:rgba(248,113,113,0.5)}
+:root{
+  --bg:#09090b;
+  --text:#f6f7f9; --muted:rgba(246,247,249,0.62); --faint:rgba(246,247,249,0.34);
+  --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.14);
+  --g1:#a8c4f0; --g2:#f5e6cc;
+  --tf:.22s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,system-ui,sans-serif; font-size:14px; line-height:1.55; min-height:100vh; overflow-x:hidden}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+a{color:inherit; text-decoration:none}
+svg{display:block}
+
+#authCanvas{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:0; transition:opacity 1.4s ease}
+#authCanvas.ready{opacity:1}
+.bg-veil{
+  position:fixed; inset:0; pointer-events:none; z-index:1;
+  background:
+    radial-gradient(ellipse 900px 700px at 25% 50%, rgba(168,196,240,0.13), transparent 70%),
+    radial-gradient(ellipse 700px 500px at 78% 80%, rgba(245,230,204,0.06), transparent 70%),
+    linear-gradient(180deg, rgba(9,9,11,0.5) 0%, rgba(9,9,11,0.2) 40%, rgba(9,9,11,0.55) 100%);
+}
+
+.shell{position:relative; z-index:2; min-height:100vh; display:grid; grid-template-columns:1.1fr 0.9fr}
+@media (max-width:900px){.shell{grid-template-columns:1fr} .side-brand{display:none !important}}
+
+.side-brand{display:flex; flex-direction:column; justify-content:space-between; padding:42px 52px}
+.brand-top{display:flex; align-items:center; gap:10px}
+.brand-top svg{width:30px; height:30px}
+.brand-text{display:flex; align-items:baseline; line-height:1}
+.logo-b{font-size:18px; font-weight:700; letter-spacing:-0.4px; background:linear-gradient(135deg,var(--g1),var(--g2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text}
+.logo-l{font-size:18px; font-weight:300; letter-spacing:3.5px; color:var(--muted)}
+
+.brand-tagline{margin-top:auto; opacity:0; animation:fadeUp .65s .3s ease both}
+.brand-eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:10.5px; font-weight:650; letter-spacing:1.6px; text-transform:uppercase; color:rgba(168,196,240,0.86); padding:6px 14px 6px 26px; border:1px solid rgba(168,196,240,0.18); border-radius:99px; background:rgba(17,17,19,0.46); position:relative; margin-bottom:22px}
+.brand-eyebrow::before{content:''; position:absolute; left:11px; top:50%; width:7px; height:7px; border-radius:50%; transform:translateY(-50%); background:var(--g1); box-shadow:0 0 14px rgba(168,196,240,0.75); animation:pulseDot 2.4s ease infinite}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.5}}
+
+.brand-title{font-size:clamp(34px, 3.8vw, 58px); font-weight:780; letter-spacing:-2.2px; line-height:1.04; margin-bottom:20px; min-height:1.04em; background:linear-gradient(135deg, #fff 28%, rgba(168,196,240,0.72)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text}
+.cursor{display:inline-block; width:3px; height:.82em; background:var(--g1); margin-left:3px; vertical-align:text-bottom; border-radius:2px; animation:blink 1s step-end infinite; box-shadow:0 0 12px rgba(168,196,240,0.7)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.brand-sub{font-size:15px; color:var(--muted); max-width:480px; line-height:1.7; margin-bottom:30px}
+
+.brand-pillars{display:grid; gap:14px; max-width:460px}
+.pillar{display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border-radius:12px; background:rgba(17,17,19,0.5); border:1px solid var(--border); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); opacity:0; animation:fadeUp .5s ease both; transition:all var(--tf)}
+.pillar:nth-child(1){animation-delay:.6s}
+.pillar:nth-child(2){animation-delay:.72s}
+.pillar:hover{border-color:rgba(168,196,240,0.28); transform:translateX(2px)}
+.pillar-icon{width:32px; height:32px; border-radius:8px; flex-shrink:0; background:linear-gradient(135deg, rgba(168,196,240,0.22), rgba(245,230,204,0.08)); border:1px solid rgba(168,196,240,0.26); display:flex; align-items:center; justify-content:center}
+.pillar-icon svg{width:14px; height:14px; stroke:var(--g1); fill:none; stroke-width:1.7}
+.pillar-text strong{display:block; font-size:13px; font-weight:650; color:var(--text); margin-bottom:2px}
+.pillar-text span{font-size:11.5px; color:var(--faint)}
+.brand-foot{font-size:11px; color:var(--faint); margin-top:24px}
+
+/* RIGHT CARD */
+.side-form{display:flex; align-items:center; justify-content:center; padding:30px 44px}
+.card{
+  width:100%; max-width:420px;
+  background:rgba(17,17,20,0.72);
+  -webkit-backdrop-filter:blur(26px) saturate(140%);
+  backdrop-filter:blur(26px) saturate(140%);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:20px;
+  padding:34px 32px 26px;
+  box-shadow:0 30px 80px -30px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+  opacity:0; transform:translateY(14px);
+  animation:fadeUp .6s .2s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.card-head{margin-bottom:24px}
+.card-title{font-size:22px; font-weight:700; letter-spacing:-0.5px; margin-bottom:6px}
+.card-sub{font-size:13px; color:var(--muted)}
+
+.alert{display:none; padding:10px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px; line-height:1.4}
+.alert-err{background:rgba(248,113,113,0.08); color:#f87171; border:1px solid rgba(248,113,113,0.22)}
+.alert-ok{background:rgba(74,222,128,0.08); color:#4ade80; border:1px solid rgba(74,222,128,0.22)}
+
+.btn-google{width:100%; display:flex; align-items:center; justify-content:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:11px 18px; font-size:13.5px; font-weight:500; color:var(--text); transition:all var(--tf); margin-bottom:16px}
+.btn-google:hover{border-color:rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); transform:translateY(-1px)}
+.btn-google svg{width:17px; height:17px; flex-shrink:0}
+
+.divider{display:flex; align-items:center; gap:12px; margin-bottom:16px}
+.div-line{flex:1; height:1px; background:var(--border)}
+.div-txt{font-size:10.5px; color:var(--faint); letter-spacing:.8px; text-transform:uppercase}
+
+.field{margin-bottom:12px}
+.flabel{display:block; font-size:11.5px; font-weight:550; color:var(--muted); margin-bottom:6px; letter-spacing:.3px}
+.finput{width:100%; padding:10px 14px; border-radius:9px; background:rgba(9,9,11,0.7); border:1px solid var(--border); font-family:inherit; font-size:13.5px; color:var(--text); transition:border-color var(--tf), box-shadow var(--tf)}
+.finput:focus{outline:none; border-color:rgba(168,196,240,0.5); box-shadow:0 0 0 3px rgba(168,196,240,0.08)}
 .pw-wrap{position:relative}
-.pw-wrap .finput{padding-right:44px}
-.eye{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--faint);transition:color 0.15s;padding:0;display:flex;align-items:center}
-.eye:hover{color:var(--muted)}
-.eye svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.forgot{font-size:12px;color:var(--faint);cursor:pointer;text-align:right;display:block;margin-top:2px;transition:color 0.15s}
-.forgot:hover{color:var(--muted)}
-.btn-submit{width:100%;font-size:14px;font-weight:600;color:#000;background:linear-gradient(135deg,var(--g1),var(--g2));border:none;border-radius:10px;padding:13px;cursor:pointer;transition:all 0.2s;margin-top:4px}
-.btn-submit:hover{opacity:0.9;transform:translateY(-1px)}
-.btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
-.spinner{display:none;width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;margin:0 auto}
+.eye{position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:6px; color:var(--faint); transition:color var(--tf)}
+.eye:hover{color:var(--text)}
+.eye svg{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8}
+.forgot{font-size:11px; color:var(--g1); cursor:pointer; margin-top:6px; display:inline-block; transition:opacity var(--tf)}
+.forgot:hover{opacity:.7}
+
+.btn-submit{width:100%; padding:12px; border-radius:10px; background:linear-gradient(135deg,var(--g1),var(--g2)); color:#0a0a0c; font-size:13.5px; font-weight:650; margin-top:6px; transition:all var(--tf); display:flex; align-items:center; justify-content:center}
+.btn-submit:hover{transform:translateY(-1px); box-shadow:0 8px 24px -8px rgba(168,196,240,0.45)}
+.btn-submit:disabled{opacity:.6; cursor:not-allowed; transform:none}
+.spinner{width:16px; height:16px; border:2px solid rgba(0,0,0,0.18); border-top-color:#0a0a0c; border-radius:50%; animation:spin .7s linear infinite; display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.card-footer{text-align:center;margin-top:22px;font-size:13px;color:var(--muted)}
-.card-footer a{font-weight:500;background:linear-gradient(135deg,var(--g1),var(--g2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.terms{text-align:center;margin-top:14px;font-size:11.5px;color:var(--faint);line-height:1.6}
-.terms a{color:var(--faint);text-decoration:underline;text-underline-offset:2px}
-.check-sent{display:none;text-align:center;padding:32px 0}
-.check-icon{width:56px;height:56px;border-radius:16px;background:rgba(168,196,240,0.08);border:1px solid rgba(168,196,240,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
-.check-icon svg{width:24px;height:24px;stroke:var(--g1);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.check-sent h3{font-size:18px;font-weight:600;letter-spacing:-0.4px;margin-bottom:8px}
-.check-sent p{font-size:13.5px;color:var(--muted);line-height:1.7}
-@media(max-width:480px){.nav{padding:16px 20px}.main{padding:32px 16px}}
+
+.demo-divider{display:flex; align-items:center; gap:12px; margin:22px 0 14px}
+.btn-demo{width:100%; display:flex; align-items:center; justify-content:center; gap:9px; background:rgba(168,196,240,0.07); border:1px solid rgba(168,196,240,0.24); border-radius:10px; padding:12px 18px; font-size:13px; font-weight:550; color:rgba(168,196,240,0.95); transition:all var(--tf); position:relative}
+.btn-demo:hover{background:rgba(168,196,240,0.14); border-color:rgba(168,196,240,0.42); transform:translateY(-1px); box-shadow:0 8px 22px -10px rgba(168,196,240,0.36)}
+.btn-demo svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.8}
+.demo-badge{font-size:9.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; background:rgba(168,196,240,0.2); border:1px solid rgba(168,196,240,0.28); border-radius:99px; padding:2px 8px; color:rgba(168,196,240,0.95); margin-left:auto}
+
+.card-foot{text-align:center; font-size:12px; color:var(--muted); margin-top:16px; padding-top:16px; border-top:1px solid var(--border)}
+.card-foot a{color:var(--g1); font-weight:550}
+.terms{text-align:center; font-size:10.5px; color:var(--faint); margin-top:14px}
+.terms a{color:var(--muted); text-decoration:underline}
+
+.check-sent{display:none; text-align:center; padding:14px 0}
+.check-icon{width:44px; height:44px; margin:0 auto 12px; border-radius:12px; background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3); display:flex; align-items:center; justify-content:center}
+.check-icon svg{width:20px; height:20px; stroke:#4ade80; fill:none; stroke-width:1.7}
 </style>
 </head>
 <body>
-<div class="glow"></div>
 
-<nav class="nav">
-  <div class="nav-logo" onclick="window.location.href='index.html'">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <circle cx="12" cy="12" r="8.5" stroke="url(#lg)" stroke-width="1.5"/>
-      <circle cx="12" cy="12" r="4" stroke="url(#lg)" stroke-width="1" opacity="0.6"/>
-      <circle cx="12" cy="12" r="1.5" fill="url(#lg)"/>
-      <line x1="18" y1="18" x2="23" y2="23" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-      <defs><linearGradient id="lg" x1="0" y1="0" x2="26" y2="26"><stop offset="0%" stop-color="#a8c4f0"/><stop offset="100%" stop-color="#f5e6cc"/></linearGradient></defs>
-    </svg>
-    <span class="logo-b">Paper</span><span class="logo-l">Lens</span>
-  </div>
-  <div class="nav-right">Don't have an account? <a href="signup.html">Sign up</a></div>
-</nav>
+<canvas id="authCanvas" aria-hidden="true"></canvas>
+<div class="bg-veil" aria-hidden="true"></div>
 
-<main class="main">
-  <div class="card">
-    <div class="card-header">
-      <h1>Welcome back</h1>
-      <p>Sign in to your PaperLens account</p>
-    </div>
+<div class="shell">
+  <section class="side-brand">
+    <a class="brand-top" href="index.html">
+      <svg viewBox="0 0 28 28" fill="none">
+        <circle cx="13" cy="13" r="9" stroke="url(#slg)" stroke-width="1.5"/>
+        <circle cx="13" cy="13" r="4.5" stroke="url(#slg)" stroke-width="1" opacity="0.6"/>
+        <circle cx="13" cy="13" r="1.8" fill="url(#slg)"/>
+        <line x1="19.5" y1="19.5" x2="25.5" y2="25.5" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <defs><linearGradient id="slg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stop-color="#a8c4f0"/><stop offset="100%" stop-color="#f5e6cc"/></linearGradient></defs>
+      </svg>
+      <div class="brand-text"><span class="logo-b">Paper</span><span class="logo-l">Lens</span></div>
+    </a>
 
-    <div class="alert alert-err" id="err"></div>
-    <div class="alert alert-ok" id="ok"></div>
+    <div class="brand-tagline">
+      <div class="brand-eyebrow">AI/ML research intelligence</div>
+      <h1 class="brand-title" id="brand-title">&nbsp;</h1>
+      <p class="brand-sub">Multi-agent paper analysis on demand. A community-curated radar across arXiv, HuggingFace, OpenAI, DeepMind, and the labs that move the field. Every paper, peeled.</p>
 
-    <button class="btn-google" onclick="googleSignIn()">
-      <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-      Continue with Google
-    </button>
-
-    <div class="divider"><div class="div-line"></div><span class="div-txt">or continue with email</span><div class="div-line"></div></div>
-
-    <div class="form" id="login-form">
-      <div class="fg">
-        <label class="flabel">Email address</label>
-        <input class="finput" type="email" id="email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('pw').focus()"/>
-      </div>
-      <div class="fg">
-        <label class="flabel">Password</label>
-        <div class="pw-wrap">
-          <input class="finput" type="password" id="pw" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
-          <button class="eye" type="button" onclick="togglePwd('pw','eye-ic')">
-            <svg id="eye-ic" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+      <div class="brand-pillars">
+        <div class="pillar">
+          <div class="pillar-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <div class="pillar-text"><strong>Paper Peeler</strong><span>Three parallel agents extract walkthrough, architecture, and math from any paper</span></div>
         </div>
-        <span class="forgot" onclick="forgotPwd()">Forgot password?</span>
+        <div class="pillar">
+          <div class="pillar-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+          <div class="pillar-text"><strong>Research Radar</strong><span>Community-rated signal across every major AI/ML source, refreshed every 30 minutes</span></div>
+        </div>
       </div>
-      <button class="btn-submit" id="sub-btn" onclick="doLogin()">
-        <span id="btn-txt">Sign in</span>
-        <div class="spinner" id="spinner"></div>
+
+      <div class="brand-foot">© 2026 PaperLens · Built for researchers, by researchers</div>
+    </div>
+  </section>
+
+  <section class="side-form">
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Welcome back</h2>
+        <p class="card-sub">Sign in to continue to PaperLens</p>
+      </div>
+
+      <div class="alert alert-err" id="err"></div>
+      <div class="alert alert-ok" id="ok"></div>
+
+      <button class="btn-google" onclick="googleSignIn()">
+        <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Continue with Google
       </button>
-    </div>
 
-    <div class="check-sent" id="check-sent">
-      <div class="check-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-      <h3>Check your email</h3>
-      <p>Password reset link sent to<br/><strong id="reset-email" style="color:white"></strong></p>
-      <br/><p style="font-size:12px;color:var(--faint)">Didn't get it? Check spam or <span style="cursor:pointer;text-decoration:underline" onclick="showForm()">try again</span></p>
-    </div>
+      <div class="divider"><div class="div-line"></div><span class="div-txt">or with email</span><div class="div-line"></div></div>
 
-    <div class="card-footer">Don't have an account? <a href="signup.html">Create one free</a></div>
-    <div class="terms">By signing in you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a></div>
-  </div>
-</main>
+      <form id="login-form" onsubmit="event.preventDefault(); doLogin()">
+        <div class="field">
+          <label class="flabel">Email</label>
+          <input class="finput" type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <div class="field">
+          <label class="flabel">Password</label>
+          <div class="pw-wrap">
+            <input class="finput" type="password" id="pw" placeholder="Your password" autocomplete="current-password"/>
+            <button class="eye" type="button" onclick="togglePwd()">
+              <svg id="eye-ic" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="forgot" onclick="forgotPwd()">Forgot password?</span>
+        </div>
+        <button class="btn-submit" id="sub-btn" type="submit">
+          <span id="btn-txt">Sign in</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+      </form>
+
+      <div class="check-sent" id="check-sent">
+        <div class="check-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+        <h3 style="margin-bottom:6px;font-size:15px">Check your email</h3>
+        <p style="font-size:13px;color:var(--muted)">Reset link sent to <strong id="reset-email" style="color:var(--text)"></strong></p>
+      </div>
+
+      <div class="demo-divider"><div class="div-line"></div><span class="div-txt">or explore instantly</span><div class="div-line"></div></div>
+      <button class="btn-demo" onclick="tryDemo()">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Try a Demo
+        <span class="demo-badge">No signup</span>
+      </button>
+
+      <div class="card-foot">Don't have an account? <a href="signup.html">Create one free</a></div>
+      <div class="terms">By signing in you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy</a></div>
+    </div>
+  </section>
+</div>
 
 <script>
-const SUPABASE_URL='https://vsrtfsietsbvvucbwzkr.supabase.co'
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
-let sb
-try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){console.warn('Supabase SDK not loaded')}
+const SUPABASE_URL='https://tzzleyysodusezlpttcl.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6emxleXlzb2R1c2V6bHB0dGNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3ODM3NDYsImV4cCI6MjA5NTM1OTc0Nn0.JuKKiPc1j-XM3Clj6P-eqYUHNP6ek3BZXCOWjIdvG6Q';
+let sb;
+try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); }catch(e){}
 
-// Check session
 if(sb){sb.auth.getSession().then(({data:{session}})=>{if(session)window.location.href='dashboard.html'}).catch(()=>{})}
 
-function showErr(m){const e=document.getElementById('err');e.textContent=m;e.style.display='block';document.getElementById('ok').style.display='none'}
-function showOk(m){const e=document.getElementById('ok');e.textContent=m;e.style.display='block';document.getElementById('err').style.display='none'}
-function clearAlerts(){document.getElementById('err').style.display='none';document.getElementById('ok').style.display='none'}
-function setLoading(v){const b=document.getElementById('sub-btn');const t=document.getElementById('btn-txt');const s=document.getElementById('spinner');b.disabled=v;t.style.display=v?'none':'block';s.style.display=v?'block':'none'}
-function clearInput(id){document.getElementById(id).classList.remove('err')}
-function showForm(){document.getElementById('login-form').style.display='flex';document.getElementById('check-sent').style.display='none'}
+const $ = q => document.querySelector(q);
+function showErr(m){const e=$('#err');e.textContent=m;e.style.display='block';$('#ok').style.display='none'}
+function showOk(m){const e=$('#ok');e.textContent=m;e.style.display='block';$('#err').style.display='none'}
+function clearAlerts(){$('#err').style.display='none';$('#ok').style.display='none'}
+function setLoading(on){$('#sub-btn').disabled=on; $('#btn-txt').style.display=on?'none':'inline'; $('#spinner').style.display=on?'inline-block':'none';}
 
 async function doLogin(){
-  clearAlerts()
-  const email=document.getElementById('email').value.trim()
-  const pw=document.getElementById('pw').value
-  if(!email||!email.includes('@')){showErr('Please enter a valid email.');document.getElementById('email').classList.add('err');return}
-  if(!pw||pw.length<6){showErr('Please enter your password.');document.getElementById('pw').classList.add('err');return}
-  if(!sb){showErr('Authentication service not available. Please check your connection.');return}
-  setLoading(true)
+  clearAlerts();
+  const em=$('#email').value.trim(); const pw=$('#pw').value;
+  if(!em || !pw){ showErr('Email and password required'); return; }
+  if(!sb){ showErr('Authentication service not available'); return; }
+  setLoading(true);
   try{
-    const{data,error}=await sb.auth.signInWithPassword({email,password:pw})
-    if(error){
-      if(error.message.includes('Invalid login'))showErr('Incorrect email or password.')
-      else if(error.message.includes('Email not confirmed'))showErr('Please verify your email first. Check your inbox.')
-      else showErr(error.message)
-      setLoading(false);return
-    }
-    showOk('Signed in! Redirecting...')
-    setTimeout(()=>window.location.href='dashboard.html',800)
-  }catch(e){showErr('Something went wrong. Please try again.');setLoading(false)}
+    const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error){ showErr(error.message); setLoading(false); return; }
+    showOk('Signed in. Redirecting…');
+    setTimeout(()=>window.location.href='dashboard.html',600);
+  }catch(e){ showErr('Sign in failed'); setLoading(false); }
 }
 
 async function googleSignIn(){
-  clearAlerts()
-  if(!sb){showErr('Authentication service not available.');return}
-  try{
-    const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/dashboard.html'}})
-    if(error)showErr('Google sign in failed. Try again.')
-  }catch(e){showErr('Something went wrong. Please try again.')}
+  if(!sb){ showErr('Authentication service not available'); return; }
+  try{ await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/dashboard.html'}}); }
+  catch(e){ showErr('Could not start Google sign-in'); }
 }
 
 async function forgotPwd(){
-  clearAlerts()
-  const email=document.getElementById('email').value.trim()
-  if(!email||!email.includes('@')){showErr('Enter your email address above first.');document.getElementById('email').focus();return}
-  if(!sb){showErr('Authentication service not available.');return}
-  setLoading(true)
+  clearAlerts();
+  const em=$('#email').value.trim();
+  if(!em || !em.includes('@')){ showErr('Enter your email above first'); $('#email').focus(); return; }
+  if(!sb){ showErr('Authentication service not available'); return; }
+  setLoading(true);
   try{
-    const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/reset-password.html'})
-    if(error){showErr(error.message);setLoading(false);return}
-    document.getElementById('login-form').style.display='none'
-    document.getElementById('reset-email').textContent=email
-    document.getElementById('check-sent').style.display='block'
-    setLoading(false)
-  }catch(e){showErr('Could not send reset email.');setLoading(false)}
+    const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:window.location.origin+'/reset-password.html'});
+    if(error){ showErr(error.message); setLoading(false); return; }
+    $('#login-form').style.display='none';
+    $('#reset-email').textContent=em;
+    $('#check-sent').style.display='block';
+    setLoading(false);
+  }catch(e){ showErr('Could not send reset email'); setLoading(false); }
 }
 
-let pwVis=false
-function togglePwd(inputId,iconId){
-  pwVis=!pwVis
-  document.getElementById(inputId).type=pwVis?'text':'password'
-  document.getElementById(iconId).innerHTML=pwVis
+let pwVis=false;
+function togglePwd(){
+  pwVis=!pwVis; $('#pw').type=pwVis?'text':'password';
+  $('#eye-ic').innerHTML=pwVis
     ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-    :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+    :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 }
 
-['email','pw'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',function(){this.classList.remove('err');clearAlerts()})})
+['email','pw'].forEach(id=>{const el=$('#'+id); if(el) el.addEventListener('input',function(){this.classList.remove('err');clearAlerts()});});
+
+function tryDemo(){
+  localStorage.setItem('pl_demo','true');
+  localStorage.setItem('pl_user',JSON.stringify({id:'demo-user-000',email:'demo@paperlens.dev',plan:'free',name:'Demo User',demo:true}));
+  showOk('Loading demo…');
+  setTimeout(()=>window.location.href='dashboard.html',500);
+}
+
+function typewriter(el, text, speed=46){
+  el.textContent='';
+  const cursor=document.createElement('span'); cursor.className='cursor'; el.appendChild(cursor);
+  let i=0;
+  const tick=setInterval(()=>{
+    if(i<text.length){ el.insertBefore(document.createTextNode(text[i]),cursor); i++; }
+    else{ clearInterval(tick); setTimeout(()=>cursor.remove(),2200); }
+  },speed);
+}
+setTimeout(()=>typewriter($('#brand-title'),'Every paper, peeled.',48),350);
+
+/* ── 3D Flowing Ribbon (matches dashboard) ── */
+(async function initBg(){
+  try{
+    const THREE=await import('https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js');
+    const canvas=$('#authCanvas'); if(!canvas) return;
+    const W=()=>window.innerWidth, H=()=>window.innerHeight;
+    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(W(),H(),false);
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(48,W()/H(),0.1,200);
+    camera.position.set(-4,0,16); camera.lookAt(0,0,0);
+    const root=new THREE.Group(); scene.add(root);
+
+    class HelixCurve extends THREE.Curve{
+      constructor(scale=4){ super(); this.scale=scale; }
+      getPoint(t, target=new THREE.Vector3()){
+        const angle=t*Math.PI*4;
+        return target.set(Math.cos(angle)*this.scale,(t-0.5)*this.scale*2.6,Math.sin(angle)*this.scale);
+      }
+    }
+    const path=new HelixCurve(3.4);
+    const tubeGeo=new THREE.TubeGeometry(path,220,0.38,6,false);
+    const tubeWire=new THREE.WireframeGeometry(tubeGeo);
+    const tubeMat=new THREE.LineBasicMaterial({color:0xa8c4f0,transparent:true,opacity:0.18});
+    const ribbon=new THREE.LineSegments(tubeWire,tubeMat);
+    root.add(ribbon);
+
+    const PC=160;
+    const partGeo=new THREE.BufferGeometry();
+    const pos=new Float32Array(PC*3);
+    for(let i=0;i<PC;i++){
+      const r=6+Math.random()*10, theta=Math.random()*Math.PI*2, phi=(Math.random()-0.5)*Math.PI*0.85;
+      pos[i*3]=Math.cos(theta)*r*Math.cos(phi);
+      pos[i*3+1]=Math.sin(phi)*r;
+      pos[i*3+2]=Math.sin(theta)*r*Math.cos(phi);
+    }
+    partGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const particles=new THREE.Points(partGeo,new THREE.PointsMaterial({color:0xa8c4f0,size:1.3,transparent:true,opacity:0.42,sizeAttenuation:false}));
+    root.add(particles);
+
+    window.addEventListener('resize',()=>{ renderer.setSize(W(),H(),false); camera.aspect=W()/H(); camera.updateProjectionMatrix(); });
+    let t0=performance.now();
+    function tick(now){
+      const t=(now-t0)/1000;
+      ribbon.rotation.y=t*0.08;
+      ribbon.rotation.x=Math.sin(t*0.14)*0.12;
+      particles.rotation.y=-t*0.022;
+      tubeMat.opacity=0.16+Math.sin(t*0.5)*0.04;
+      camera.position.x=-4+Math.cos(t*0.1)*0.6;
+      camera.lookAt(0,0,0);
+      renderer.render(scene,camera);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    setTimeout(()=>canvas.classList.add('ready'),100);
+  }catch(e){console.warn('3D bg failed',e); $('#authCanvas').style.display='none';}
+})();
 </script>
 </body>
 </html>

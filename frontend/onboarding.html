@@ -308,7 +308,7 @@
 
 <script>
   // ── Supabase — update URL and KEY to match your project ──
-  const SUPABASE_URL = 'https://vsrtfsietsbvvucbwzkr.supabase.co'
+  const SUPABASE_URL = 'https://tzzleyysodusezlpttcl.supabase.co'
   const SUPABASE_ANON_KEY = 'yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzcnRmc2lldHNidnZ1Y2J3emtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDQxODQsImV4cCI6MjA4OTY4MDE4NH0.oSY9MuqoFqeDWmuk9niTdpUacQ_CwdyigRvct_8N5wo'
   let sb = null
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) } catch(e) {}
@@ -321,27 +321,39 @@
 
   // ── Init — NEVER crash, always show the page ──
   async function init() {
-    // Try to get user name — but if anything fails, just show default
     try {
-      if (!sb) return
-      const { data: { session } } = await sb.auth.getSession()
-      if (!session) return // stay on page, don't redirect
-      const u = session.user
-      // If already onboarded, go to dashboard
-      if (u.user_metadata?.onboarded === true) {
-        window.location.href = 'dashboard.html'
-        return
+      let u = null;
+      try {
+        const stored = localStorage.getItem('pl_user');
+        if (stored) u = JSON.parse(stored);
+      } catch(e){}
+
+      if (!u) {
+        u = {
+          firstName: 'Demo',
+          lastName: 'Researcher',
+          email: 'demo@paperlens.com',
+          bio: 'ML Researcher & Scholar',
+          plan: 'pro',
+          topics: ['llm', 'cv'],
+          notifications: {
+            daily: true,
+            instant: false,
+            peeler: true,
+            weekly: true,
+            whatsapp_notif: false,
+            product: true
+          },
+          whatsappConnected: false
+        };
+        localStorage.setItem('pl_user', JSON.stringify(u));
       }
-      // Set name
-      const name = u.user_metadata?.first_name
-        || u.user_metadata?.full_name?.split(' ')[0]
-        || u.email?.split('@')[0]
-        || 'researcher'
-      document.getElementById('welcome-name').textContent = name
-      document.getElementById('allset-name').textContent = name
+
+      const name = u.firstName || 'researcher';
+      document.getElementById('welcome-name').textContent = name;
+      document.getElementById('allset-name').textContent = name;
     } catch(e) {
-      // Do nothing — page still works perfectly without Supabase
-      console.log('Session check skipped:', e.message)
+      console.log('Session check skipped:', e.message);
     }
   }
 
@@ -409,18 +421,18 @@
 
   // ── Finish onboarding ──
   async function finishOnboarding() {
-    // Save to Supabase if available
     try {
-      if (sb) {
-        await sb.auth.updateUser({
-          data: {
-            onboarded: true,
-            topics: selectedTopics,
-            digest_freq: selectedFreq,
-            channels: selectedChannels,
-          }
-        })
-      }
+      let u = JSON.parse(localStorage.getItem('pl_user')) || {};
+      u.onboarded = true;
+      u.topics = selectedTopics;
+      u.digest_freq = selectedFreq;
+      u.channels = selectedChannels;
+      if (!u.notifications) u.notifications = {};
+      u.notifications.daily = selectedFreq === 'daily';
+      u.notifications.weekly = selectedFreq === 'weekly';
+      u.notifications.instant = selectedFreq === 'instant';
+      u.notifications.whatsapp_notif = selectedChannels.includes('whatsapp');
+      localStorage.setItem('pl_user', JSON.stringify(u));
     } catch(e) { console.log('Could not save preferences:', e.message) }
 
     // Build summary chips
