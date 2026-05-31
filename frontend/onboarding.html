@@ -321,6 +321,11 @@
 
   // ── Init — NEVER crash, always show the page ──
   async function init() {
+    // Skip onboarding for returning users
+    if (localStorage.getItem('pl_onboarding_done') === 'true') {
+      window.location.href = 'dashboard.html';
+      return;
+    }
     try {
       let u = null;
       try {
@@ -421,6 +426,7 @@
 
   // ── Finish onboarding ──
   async function finishOnboarding() {
+    localStorage.setItem('pl_onboarding_done', 'true');
     try {
       let u = JSON.parse(localStorage.getItem('pl_user')) || {};
       u.onboarded = true;
