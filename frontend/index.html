@@ -51,12 +51,24 @@ svg{display:block}
 .nav{
   display:flex; align-items:center; justify-content:space-between;
   padding:18px 48px;
-  border-bottom:1px solid var(--border);
   position:sticky; top:0;
-  background:rgba(10,10,12,0.85);
-  -webkit-backdrop-filter:blur(18px) saturate(140%);
-  backdrop-filter:blur(18px) saturate(140%);
+  background:rgba(9,9,11,0.42);
+  -webkit-backdrop-filter:blur(28px) saturate(160%);
+  backdrop-filter:blur(28px) saturate(160%);
+  border-bottom:1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   z-index:1000
+}
+
+/* ══ SCROLL REVEAL ══ */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.82s cubic-bezier(0.16, 1, 0.3, 1), transform 0.82s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
 }
 .nav-logo{display:flex; align-items:center; gap:10px; cursor:pointer; opacity:0}
 .nav-text-wrap{display:flex; align-items:baseline; line-height:1}
@@ -246,37 +258,37 @@ svg{display:block}
 </section>
 
 <!-- ── FEATURES ── -->
-<section class="features-wrap" id="features">
+<section class="features-wrap reveal" id="features">
   <div class="section-eyebrow">What's inside</div>
   <h2 class="section-title">Two tools, one workflow</h2>
   <p class="section-sub">Track what matters with Research Radar. Understand it instantly with Paper Peeler. Everything you need to stay ahead of the AI/ML field, in one place.</p>
   <div class="features">
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
       <h3>Paper Peeler</h3>
       <p>Three AI agents run in parallel to extract architecture, walk through the math, and explain every concept — for any paper. ~25 seconds.</p>
     </div>
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
       <h3>Research Radar</h3>
       <p>Live feed from arXiv, HuggingFace, OpenAI, DeepMind, Anthropic & Meta. Community-rated. Refreshed every 30 minutes.</p>
     </div>
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
       <h3>Grounded chat</h3>
       <p>Ask anything about a paper. Every answer is grounded in the paper's own text — no hallucinations, no generic ML summaries.</p>
     </div>
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
       <h3>Cached forever</h3>
       <p>If anyone has peeled a paper, you get it instantly — 0 credits. The library grows with every user.</p>
     </div>
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15 8.5 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 9 8.5 12 2"/></svg></div>
       <h3>Community ratings</h3>
       <p>Rate any item 1–5 stars. The feed re-ranks live. More users, better signal — for everyone.</p>
     </div>
-    <div class="feature">
+    <div class="feature reveal">
       <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
       <h3>Daily email digest</h3>
       <p>Get the day's top papers and releases delivered to your inbox. Verify your email, pick a time, done.</p>
@@ -285,7 +297,7 @@ svg{display:block}
 </section>
 
 <!-- ── STATS ── -->
-<section class="stats" id="stats">
+<section class="stats reveal" id="stats">
   <div class="stat"><div class="stat-n" id="stat-papers">1,100+</div><div class="stat-l">Items tracked live</div></div>
   <div class="stat-div"></div>
   <div class="stat"><div class="stat-n">3</div><div class="stat-l">Agents per peel</div></div>
@@ -296,22 +308,22 @@ svg{display:block}
 </section>
 
 <!-- ── HOW IT WORKS ── -->
-<section class="how" id="how">
+<section class="how reveal" id="how">
   <div class="section-eyebrow">How it works</div>
   <h2 class="section-title">From paper to understanding in 3 steps</h2>
   <p class="section-sub">No setup, no learning curve. Drop a paper, get a complete teaching back — including math, architecture, and conversational Q&A.</p>
   <div class="steps">
-    <div class="step">
+    <div class="step reveal">
       <div class="step-num">1</div>
       <h4>Drop a paper</h4>
       <p>Paste an arXiv link, DOI, paper title, or upload a PDF. PaperLens resolves the canonical paper instantly.</p>
     </div>
-    <div class="step">
+    <div class="step reveal">
       <div class="step-num">2</div>
       <h4>Agents go to work</h4>
       <p>Three specialized AI agents run in parallel — one writes the walkthrough, one extracts the architecture, one explains every equation.</p>
     </div>
-    <div class="step">
+    <div class="step reveal">
       <div class="step-num">3</div>
       <h4>Understand it deeply</h4>
       <p>Step through the architecture canvas, peel each block open, ask follow-up questions grounded in the paper. ~25 seconds end-to-end.</p>
@@ -320,7 +332,7 @@ svg{display:block}
 </section>
 
 <!-- ── CTA ── -->
-<section class="cta-wrap">
+<section class="cta-wrap reveal">
   <div class="cta-glow"></div>
   <div class="cta">
     <h2>Start reading smarter today</h2>
@@ -400,34 +412,81 @@ async function initHeroBg(){
     camera.lookAt(0, 0, 0);
     const root = new THREE.Group(); scene.add(root);
 
-    class HelixCurve extends THREE.Curve {
-      constructor(scale=4){ super(); this.scale = scale; }
-      getPoint(t, target = new THREE.Vector3()){
-        const angle = t * Math.PI * 4;
-        return target.set(Math.cos(angle) * this.scale, (t - 0.5) * this.scale * 2.6, Math.sin(angle) * this.scale);
-      }
-    }
-    const path = new HelixCurve(3.6);
-    const tubeGeo = new THREE.TubeGeometry(path, 220, 0.42, 6, false);
-    const tubeWire = new THREE.WireframeGeometry(tubeGeo);
-    const tubeMat = new THREE.LineBasicMaterial({ color: 0xa8c4f0, transparent: true, opacity: 0.16 });
-    const ribbon = new THREE.LineSegments(tubeWire, tubeMat);
-    root.add(ribbon);
-
+    // BACKGROUND PARTICLE FIELD (Floating star field/dots)
     const PC = 180;
     const partGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(PC * 3);
     for(let i = 0; i < PC; i++){
-      const r = 6 + Math.random() * 11;
+      const r = 8 + Math.random() * 12;
       const theta = Math.random() * Math.PI * 2;
-      const phi = (Math.random() - 0.5) * Math.PI * 0.9;
+      const phi = (Math.random() - 0.5) * Math.PI * 0.95;
       positions[i*3]     = Math.cos(theta) * r * Math.cos(phi);
       positions[i*3 + 1] = Math.sin(phi) * r;
       positions[i*3 + 2] = Math.sin(theta) * r * Math.cos(phi);
     }
     partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const particles = new THREE.Points(partGeo, new THREE.PointsMaterial({color:0xa8c4f0, size:1.3, transparent:true, opacity:0.4, sizeAttenuation:false}));
+    const particles = new THREE.Points(partGeo, new THREE.PointsMaterial({
+      color: 0xa8c4f0,
+      size: 1.2,
+      transparent: true,
+      opacity: 0.32,
+      sizeAttenuation: false
+    }));
     root.add(particles);
+
+    // PREMIUM 3D NEURAL CONSTELLATION NETWORK
+    // NOTE: Set to false if you wish to run only the background particle star field.
+    const ENABLE_CONSTELLATION = true;
+    
+    let nodes = [];
+    let nodeGeo, nodePositions, nodePoints, constellationLines, lineGeo, linePos, lineCol;
+    const NC = 48;
+    const maxConnections = 120;
+
+    if(ENABLE_CONSTELLATION) {
+      nodeGeo = new THREE.BufferGeometry();
+      nodePositions = new Float32Array(NC * 3);
+      for (let i = 0; i < NC; i++) {
+        const x = (Math.random() - 0.5) * 15;
+        const y = (Math.random() - 0.5) * 10;
+        const z = (Math.random() - 0.5) * 12;
+        nodes.push({
+          x, y, z,
+          vx: (Math.random() - 0.5) * 0.014,
+          vy: (Math.random() - 0.5) * 0.014,
+          vz: (Math.random() - 0.5) * 0.014
+        });
+        nodePositions[i * 3] = x;
+        nodePositions[i * 3 + 1] = y;
+        nodePositions[i * 3 + 2] = z;
+      }
+      nodeGeo.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
+      
+      const nodeMat = new THREE.PointsMaterial({
+        color: 0xa8c4f0,
+        size: 3.5,
+        transparent: true,
+        opacity: 0.65,
+        sizeAttenuation: true
+      });
+      nodePoints = new THREE.Points(nodeGeo, nodeMat);
+      root.add(nodePoints);
+
+      // Create lines
+      lineGeo = new THREE.BufferGeometry();
+      linePos = new Float32Array(maxConnections * 2 * 3);
+      lineCol = new Float32Array(maxConnections * 2 * 3);
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+      lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 3));
+      
+      const lineMat = new THREE.LineBasicMaterial({
+        transparent: true,
+        opacity: 0.3,
+        vertexColors: true
+      });
+      constellationLines = new THREE.LineSegments(lineGeo, lineMat);
+      root.add(constellationLines);
+    }
 
     function onResize(){
       const w = W(), h = H();
@@ -440,10 +499,86 @@ async function initHeroBg(){
     let t0 = performance.now();
     function tick(now){
       const t = (now - t0) / 1000;
-      ribbon.rotation.y = t * 0.08;
-      ribbon.rotation.x = Math.sin(t * 0.15) * 0.12;
-      particles.rotation.y = -t * 0.022;
-      tubeMat.opacity = 0.14 + Math.sin(t * 0.5) * 0.04;
+      
+      // Rotate background particles
+      particles.rotation.y = -t * 0.018;
+
+      if(ENABLE_CONSTELLATION) {
+        let lineIndex = 0;
+        const posArray = lineGeo.attributes.position.array;
+        const colArray = lineGeo.attributes.color.array;
+
+        // Move nodes
+        for (let i = 0; i < NC; i++) {
+          const node = nodes[i];
+          node.x += node.vx;
+          node.y += node.vy;
+          node.z += node.vz;
+          
+          // Bounce off boundary walls
+          if (Math.abs(node.x) > 9.5) node.vx *= -1;
+          if (Math.abs(node.y) > 7.5) node.vy *= -1;
+          if (Math.abs(node.z) > 8.5) node.vz *= -1;
+          
+          nodePositions[i * 3] = node.x;
+          nodePositions[i * 3 + 1] = node.y;
+          nodePositions[i * 3 + 2] = node.z;
+        }
+        nodeGeo.attributes.position.needsUpdate = true;
+
+        // Compute distances and create faints connections
+        const maxDist = 4.2;
+        for (let i = 0; i < NC; i++) {
+          for (let j = i + 1; j < NC; j++) {
+            if (lineIndex >= maxConnections) break;
+            const n1 = nodes[i];
+            const n2 = nodes[j];
+            const dx = n1.x - n2.x;
+            const dy = n1.y - n2.y;
+            const dz = n1.z - n2.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            if (dist < maxDist) {
+              const idx = lineIndex * 6;
+              // Vert 1
+              posArray[idx] = n1.x;
+              posArray[idx + 1] = n1.y;
+              posArray[idx + 2] = n1.z;
+              // Vert 2
+              posArray[idx + 3] = n2.x;
+              posArray[idx + 4] = n2.y;
+              posArray[idx + 5] = n2.z;
+              
+              // Fade intensity by proximity
+              const alpha = 1.0 - (dist / maxDist);
+              // Base colors: R=0.66, G=0.77, B=0.94 (a8c4f0)
+              const r = 0.66 * alpha;
+              const g = 0.77 * alpha;
+              const b = 0.94 * alpha;
+              
+              colArray[idx] = r;
+              colArray[idx + 1] = g;
+              colArray[idx + 2] = b;
+              colArray[idx + 3] = r;
+              colArray[idx + 4] = g;
+              colArray[idx + 5] = b;
+              
+              lineIndex++;
+            }
+          }
+        }
+        
+        lineGeo.attributes.position.needsUpdate = true;
+        lineGeo.attributes.color.needsUpdate = true;
+        lineGeo.setDrawRange(0, lineIndex * 2);
+        
+        // Faint group rotations
+        nodePoints.rotation.y = t * 0.025;
+        nodePoints.rotation.x = Math.sin(t * 0.1) * 0.05;
+        constellationLines.rotation.y = t * 0.025;
+        constellationLines.rotation.x = Math.sin(t * 0.1) * 0.05;
+      }
+
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
@@ -457,6 +592,28 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     e.preventDefault();
     const t = document.querySelector(this.getAttribute('href'));
     if(t) t.scrollIntoView({behavior:'smooth'});
+  });
+});
+
+// Intersection Observer for scroll reveal animations
+document.addEventListener('DOMContentLoaded', () => {
+  const revealOptions = {
+    root: null,
+    rootMargin: '0px -40px 0px -40px', // slight inset for better UX triggering
+    threshold: 0.12
+  };
+  
+  const revealObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting) {
+        entry.target.classList.add('active');
+        observer.unobserve(entry.target); // trigger animation only once
+      }
+    });
+  }, revealOptions);
+  
+  document.querySelectorAll('.reveal').forEach(el => {
+    revealObserver.observe(el);
   });
 });
 </script>
