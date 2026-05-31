@@ -156,9 +156,25 @@ svg{display:block}
 /* ══ HOW IT WORKS ══ */
 .how{padding:90px 48px; border-bottom:1px solid var(--border)}
 .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:1080px; margin:0 auto; position:relative}
-.steps::before{content:''; position:absolute; top:50px; left:14%; right:14%; height:1px; background:linear-gradient(90deg, transparent, rgba(168,196,240,0.24), rgba(245,230,204,0.18), transparent); z-index:0}
-.step{background:rgba(17,17,20,0.62); border:1px solid var(--border); border-radius:16px; padding:28px 24px; transition:all .3s ease; position:relative; z-index:1; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
-.step:hover{border-color:var(--bh); transform:translateY(-3px)}
+.steps::before{
+  content:''; position:absolute; top:50px; left:14%; right:14%; height:2px;
+  background:linear-gradient(90deg, 
+    rgba(168,196,240,0.06) 0%, 
+    rgba(168,196,240,0.14) 20%, 
+    rgba(168,196,240,0.95) 50%, 
+    rgba(245,230,204,0.14) 80%, 
+    rgba(245,230,204,0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: pipelineFlow 3.5s linear infinite;
+  z-index:0;
+}
+@keyframes pipelineFlow {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.step{background:rgba(17,17,20,0.62); border:1px solid var(--border); border-radius:16px; padding:28px 24px; transition:all .3s cubic-bezier(0.4, 0, 0.2, 1); position:relative; z-index:1; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
+.step:hover{border-color:var(--bh); transform:translateY(-4px); box-shadow: 0 12px 30px -10px rgba(168,196,240,0.18)}
 .step-num{
   width:42px; height:42px; border-radius:50%;
   background:linear-gradient(135deg, rgba(168,196,240,0.2), rgba(245,230,204,0.1));
@@ -167,6 +183,13 @@ svg{display:block}
   font-size:14px; font-weight:700; color:var(--g1);
   margin-bottom:18px;
   box-shadow:0 4px 18px -6px rgba(168,196,240,0.36);
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.step:hover .step-num{
+  transform: scale(1.08);
+  border-color: rgba(168,196,240,0.6);
+  box-shadow: 0 0 14px rgba(168,196,240,0.5);
+  color: #fff;
 }
 .step h4{font-size:15.5px; font-weight:650; letter-spacing:-0.3px; margin-bottom:8px}
 .step p{font-size:13px; color:var(--muted); line-height:1.7}
@@ -465,7 +488,7 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   });
 });
 
-// Intersection Observer for scroll reveal animations
+// Intersection Observer for scroll reveal animations and stats counting
 document.addEventListener('DOMContentLoaded', () => {
   const revealOptions = {
     root: null,
@@ -473,10 +496,54 @@ document.addEventListener('DOMContentLoaded', () => {
     threshold: 0.12
   };
   
+  // COUNT-UP ANIMATION FOR STATISTICS
+  function animateValue(obj, start, end, duration, prefix = '', suffix = '') {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // Easing: easeOutQuad
+      const easeProgress = progress * (2 - progress);
+      const currentValue = Math.floor(easeProgress * (end - start) + start);
+      // Format number with commas
+      const formatted = currentValue.toLocaleString('en-US');
+      obj.textContent = prefix + formatted + suffix;
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+    window.requestAnimationFrame(step);
+  }
+
+  function triggerStatsCounter() {
+    document.querySelectorAll('.stat-n').forEach(el => {
+      const text = el.textContent.trim();
+      // Parse prefixes (like ~) and suffixes (like s or +)
+      const match = text.match(/^([^0-9,]*)([0-9,]+)([^0-9,]*)$/);
+      if (match) {
+        const prefix = match[1];
+        const numStr = match[2].replace(/,/g, '');
+        const suffix = match[3];
+        const targetNum = parseInt(numStr, 10);
+        if (!isNaN(targetNum)) {
+          // Reset start value to 0 and count up
+          el.textContent = prefix + "0" + suffix;
+          animateValue(el, 0, targetNum, 1600, prefix, suffix);
+        }
+      }
+    });
+  }
+
   const revealObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
       if(entry.isIntersecting) {
         entry.target.classList.add('active');
+        
+        // Trigger statistics counting when stats block enters viewport
+        if(entry.target.id === 'stats') {
+          triggerStatsCounter();
+        }
+        
         observer.unobserve(entry.target); // trigger animation only once
       }
     });
