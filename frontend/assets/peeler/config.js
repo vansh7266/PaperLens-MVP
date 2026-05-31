@@ -8,7 +8,7 @@
   const localApiBase = host === "127.0.0.1" ? "http://127.0.0.1:8000" : "http://localhost:8000";
 
   window.PAPERLENS_CONFIG = {
-    API_BASE_URL: storedApi || (isLocal ? localApiBase : window.location.origin),
+    API_BASE_URL: storedApi || (isLocal ? localApiBase : "https://paperlens-mvp.onrender.com"),
     SUPABASE_URL: storedSupabaseUrl || "",
     SUPABASE_ANON_KEY: storedSupabaseAnon || "",
   };

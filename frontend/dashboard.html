@@ -362,7 +362,8 @@ a{color:inherit; text-decoration:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const API_BASE = 'http://localhost:8000';
+const API_BASE = window.localStorage.getItem('PAPERLENS_API_BASE_URL') || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8000' : 'https://paperlens-mvp.onrender.com');
 const SUPABASE_URL = 'https://tzzleyysodusezlpttcl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6emxleXlzb2R1c2V6bHB0dGNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3ODM3NDYsImV4cCI6MjA5NTM1OTc0Nn0.JuKKiPc1j-XM3Clj6P-eqYUHNP6ek3BZXCOWjIdvG6Q';
 let sb = null;
