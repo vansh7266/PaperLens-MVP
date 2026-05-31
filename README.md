@@ -221,11 +221,14 @@ Open `http://localhost:5173`. Use **Try a Demo** on the login page to explore wi
 
 ## Contributors
 
+- **Vansh Gupta** — Lead Developer, BTech 2nd Year, IIIT Bhopal
+  [![GitHub](https://img.shields.io/badge/GitHub-vansh7266-lightgrey?logo=github)](https://github.com/vansh7266)
+
 - **Codex (OpenAI)** — AI Coding Companion & primary Codex workflow partner
   [![OpenAI](https://img.shields.io/badge/OpenAI-Codex-412991?logo=openai&logoColor=white)](https://openai.com/codex)
 
-- **Vansh Gupta** — Lead Developer, BTech 2nd Year, IIIT Bhopal
-  [![GitHub](https://img.shields.io/badge/GitHub-vansh7266-lightgrey?logo=github)](https://github.com/vansh7266)
+- **Claude (Anthropic)** — AI pair-programming partner throughout the build
+  [![Anthropic](https://img.shields.io/badge/Anthropic-Claude-blueviolet)](https://anthropic.com)
 
 - **Antigravity (Google DeepMind)** — AI Coding Companion
   [![DeepMind](https://img.shields.io/badge/Google-DeepMind-4285F4?logo=google&logoColor=white)](https://deepmind.google)
